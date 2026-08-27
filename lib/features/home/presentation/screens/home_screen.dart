@@ -1,33 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_typography.dart';
-import '../../../../core/mock/mock_data.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_state.dart';
 import '../../../../core/widgets/loading_indicator.dart';
+import '../../../address/providers/address_provider.dart';
+import '../../../auth/providers/auth_provider.dart';
+import '../../../cart/providers/cart_provider.dart';
+import '../../../profile/providers/user_provider.dart';
+import '../../../restaurant/providers/restaurant_provider.dart';
 import '../widgets/category_list.dart';
 import '../widgets/home_app_bar.dart';
 import '../widgets/home_bottom_nav_bar.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/restaurant_card.dart';
 
-/// FoodExpress Home Screen Preview for Day 1.
-///
-/// Demonstrates the design system, typography, color palette, and reusable components.
-class HomeScreen extends StatefulWidget {
+/// FoodExpress Home Screen with live restaurant discovery and category filtering.
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  String _selectedCategoryId = 'all';
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late final TextEditingController _searchController;
   int _currentNavIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _showNotificationMessage(String message) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -52,6 +68,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(userProfileProvider);
+    final selectedAddress = ref.watch(selectedAddressProvider);
+    final selectedCategory = ref.watch(restaurantCategoryFilterProvider);
+    final restaurantsAsync = ref.watch(filteredRestaurantsProvider);
+    final cartItemCount = ref.watch(cartItemCountProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -61,8 +83,17 @@ class _HomeScreenState extends State<HomeScreen> {
             // Top App Bar
             SliverToBoxAdapter(
               child: HomeAppBar(
-                onLocationTap: () => _showNotificationMessage('Delivery address selector (Coming in Day 7)'),
+                userName: user?.name,
+                userEmail: user?.email,
+                userAddress: selectedAddress?.formattedAddress ?? user?.address,
+                cartItemCount: cartItemCount,
+                onCartTap: () => context.push('/cart'),
+                onFavoritesTap: () => context.push('/favorites'),
+                onOrdersTap: () => context.push('/orders'),
+                onLocationTap: () => context.push('/addresses?select=true'),
                 onNotificationTap: () => _showNotificationMessage('Notifications (Coming in Day 9)'),
+                onProfileTap: () => context.push('/profile'),
+                onLogoutTap: () => ref.read(authControllerProvider.notifier).signOut(),
               ),
             ),
 
@@ -76,7 +107,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Good evening 👋',
+                      user != null && user.name.isNotEmpty
+                          ? 'Hello, ${user.name} 👋'
+                          : 'Good day 👋',
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
@@ -97,11 +130,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
 
-            // Visual Search Field
+            // Visual & Interactive Search Field
             SliverToBoxAdapter(
               child: HomeSearchBar(
-                onTap: () => _showNotificationMessage('Live search will be built in Day 4'),
-                onFilterTap: () => _showNotificationMessage('Filters will be built in Day 4'),
+                controller: _searchController,
+                onChanged: (query) {
+                  ref.read(restaurantSearchQueryProvider.notifier).state = query;
+                },
+                onFilterTap: () => _showNotificationMessage('Advanced filters coming in future days'),
               ),
             ),
 
@@ -181,14 +217,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
 
-            // Category Horizontal List
+            // Category Horizontal List connected to Riverpod
             SliverToBoxAdapter(
               child: CategoryList(
-                selectedCategoryId: _selectedCategoryId,
+                selectedCategoryId: selectedCategory,
                 onCategorySelected: (id) {
-                  setState(() {
-                    _selectedCategoryId = id;
-                  });
+                  ref.read(restaurantCategoryFilterProvider.notifier).state = id;
                 },
               ),
             ),
@@ -208,10 +242,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => _showNotificationMessage('Full restaurant catalog coming in Day 3'),
-                      child: const Text('See all'),
-                    ),
+                    if (selectedCategory != 'all' || _searchController.text.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(restaurantSearchQueryProvider.notifier).state = '';
+                          ref.read(restaurantCategoryFilterProvider.notifier).state = 'all';
+                        },
+                        child: const Text('Reset filters'),
+                      )
+                    else
+                      TextButton(
+                        onPressed: () => _showNotificationMessage('Showing all featured restaurants'),
+                        child: const Text('See all'),
+                      ),
                   ],
                 ),
               ),
@@ -219,24 +263,73 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xs)),
 
-            // Restaurant Cards List
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final restaurant = MockData.featuredRestaurants[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: RestaurantCard(
-                        restaurant: restaurant,
-                        onTap: () => _showNotificationMessage('Opening ${restaurant.name} (Coming in Day 3)'),
-                      ),
-                    );
-                  },
-                  childCount: MockData.featuredRestaurants.length,
+            // Restaurant Cards Feed with Riverpod AsyncValue handling
+            ...restaurantsAsync.when(
+              loading: () => [
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                    child: Center(
+                      child: LoadingIndicator(message: 'Discovering restaurants near you...'),
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              error: (error, stack) => [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
+                    child: ErrorState(
+                      title: 'Unable to load restaurants',
+                      message: error.toString(),
+                      onRetry: () => ref.refresh(filteredRestaurantsProvider),
+                    ),
+                  ),
+                ),
+              ],
+              data: (restaurants) {
+                if (restaurants.isEmpty) {
+                  return [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xl),
+                        child: EmptyState(
+                          title: 'No Restaurants Found',
+                          message: 'No restaurants match your search or selected category. Try searching for something else.',
+                          icon: Icons.search_off_rounded,
+                          actionText: 'Clear Filters',
+                          onAction: () {
+                            _searchController.clear();
+                            ref.read(restaurantSearchQueryProvider.notifier).state = '';
+                            ref.read(restaurantCategoryFilterProvider.notifier).state = 'all';
+                          },
+                        ),
+                      ),
+                    ),
+                  ];
+                }
+
+                return [
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final restaurant = restaurants[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                            child: RestaurantCard(
+                              restaurant: restaurant,
+                              onTap: () => context.push('/restaurant/${restaurant.id}'),
+                            ),
+                          );
+                        },
+                        childCount: restaurants.length,
+                      ),
+                    ),
+                  ),
+                ];
+              },
             ),
 
             // Design System Showcase Trigger Banner
@@ -283,6 +376,14 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: HomeBottomNavBar(
         currentIndex: _currentNavIndex,
         onTap: (index) {
+          if (index == 2) {
+            context.push('/orders');
+            return;
+          }
+          if (index == 3) {
+            context.push('/profile');
+            return;
+          }
           setState(() {
             _currentNavIndex = index;
           });

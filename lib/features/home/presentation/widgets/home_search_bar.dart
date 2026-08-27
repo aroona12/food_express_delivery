@@ -3,25 +3,33 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/widgets/app_text_field.dart';
 
-/// Visual search bar for Day 1 home preview.
+/// Visual and interactive search bar for restaurant and food discovery.
 class HomeSearchBar extends StatelessWidget {
   const HomeSearchBar({
     super.key,
+    this.controller,
+    this.onChanged,
     this.onTap,
     this.onFilterTap,
+    this.readOnly = false,
   });
 
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
   final VoidCallback? onFilterTap;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: AppTextField(
-        readOnly: true,
+        controller: controller,
+        readOnly: readOnly,
         onTap: onTap,
-        hintText: 'Search burgers, pizza, drinks...',
+        onChanged: onChanged,
+        hintText: 'Search restaurants, burgers, ramen...',
         prefixIcon: const Icon(
           Icons.search_rounded,
           color: AppColors.textSecondary,
