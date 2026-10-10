@@ -11,23 +11,6 @@
 
 Designed following **Feature-First Clean Architecture**, the codebase strictly separates presentation, domain entities, and data persistence via the **Repository Pattern**. It provides real-time Firestore document snapshot streaming, role-based access control (RBAC), declarative routing, and comprehensive automated test coverage with **416 passing tests** across 48 suites.
 
----
-
-## 📸 Screenshots & UI Showcase
-
-> [!NOTE]
-> *To add screenshots to this repository, place your captured `.png` or `.webp` files in an `assets/screenshots/` folder and link them below.*
-
-| Customer Home & Discovery | Restaurant Menu & Cart | Real-Time Order Tracking |
-| :---: | :---: | :---: |
-| *(Add screenshot: `assets/screenshots/customer_home.png`)* | *(Add screenshot: `assets/screenshots/restaurant_menu.png`)* | *(Add screenshot: `assets/screenshots/order_tracking.png`)* |
-
-| Restaurant Owner Dashboard | Kitchen Orders Queue | System Admin Telemetry |
-| :---: | :---: | :---: |
-| *(Add screenshot: `assets/screenshots/restaurant_dashboard.png`)* | *(Add screenshot: `assets/screenshots/kitchen_orders.png`)* | *(Add screenshot: `assets/screenshots/admin_dashboard.png`)* |
-
----
-
 ## ✨ Key Features (Verified Implementation)
 
 ### 🔐 1. Authentication & Role-Based Access Control (RBAC)
