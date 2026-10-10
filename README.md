@@ -242,12 +242,6 @@ flutter test
 ```
 *Current result: **416 passing tests across 48 test suites** with 0 failures.*
 
-### Test Suite Highlights
-* **Auth & Routing Tests**: Role-based access control, router race-condition handling, stream loading state transitions, and unauthenticated redirects.
-* **Order & Tracking Tests**: Timeline state rendering, order cancellation validation, invalid status transition rejection, and protected field immutability.
-* **Restaurant Portal Tests**: Missing store state (`"Store Not Configured"`), error retry mechanisms, and open/closed switch toggling.
-* **Cart & Checkout Tests**: Quantity increment/decrement math, single-restaurant enforcement, and atomic order placement.
-
 
 ## 📊 Project Status
 
