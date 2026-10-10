@@ -11,6 +11,15 @@ import 'package:foodexpressdelivery/features/order/presentation/screens/order_tr
 import 'package:foodexpressdelivery/features/order/presentation/widgets/order_tracking_timeline.dart';
 import 'package:foodexpressdelivery/features/order/providers/order_provider.dart';
 
+class _ErrorThrowingOrderRepository extends MockOrderRepository {
+  _ErrorThrowingOrderRepository({super.initialOrders});
+
+  @override
+  Future<void> updateOrderStatus(dynamic arg1, dynamic arg2, [OrderStatus? arg3]) async {
+    throw Exception('Simulated network failure on cancellation');
+  }
+}
+
 void main() {
   group('OrderTrackingScreen Widget Tests', () {
     const testUser = UserModel(
@@ -55,7 +64,7 @@ void main() {
 
     Widget createTestWidget({
       String orderId = 'ORD-TRACK-101',
-      MockOrderRepository? repository,
+      OrderRepository? repository,
     }) {
       final mockRepo = repository ??
           MockOrderRepository(
@@ -131,6 +140,213 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Out for Delivery'), findsWidgets);
+    });
+
+    // ==========================================
+    // Customer Cancellation Tests
+    // ==========================================
+
+    testWidgets('Test 1: Pending customer order displays Cancel Order button', (tester) async {
+      final pendingOrder = sampleOrder.copyWith(
+        id: 'ORD-PENDING-1',
+        status: OrderStatus.pending,
+      );
+
+      final mockRepo = MockOrderRepository(
+        initialOrders: {
+          testUser.id: [pendingOrder],
+        },
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(orderId: 'ORD-PENDING-1', repository: mockRepo),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cancel_order_button')), findsOneWidget);
+      expect(find.text('Cancel Order'), findsOneWidget);
+    });
+
+    testWidgets('Test 2: Non-pending orders do NOT display Cancel Order button', (tester) async {
+      final nonPendingStatuses = [
+        OrderStatus.confirmed,
+        OrderStatus.preparing,
+        OrderStatus.outForDelivery,
+        OrderStatus.delivered,
+        OrderStatus.cancelled,
+      ];
+
+      for (final status in nonPendingStatuses) {
+        final order = sampleOrder.copyWith(
+          id: 'ORD-STATUS-${status.name}',
+          status: status,
+        );
+
+        final mockRepo = MockOrderRepository(
+          initialOrders: {
+            testUser.id: [order],
+          },
+        );
+
+        await tester.pumpWidget(
+          createTestWidget(orderId: 'ORD-STATUS-${status.name}', repository: mockRepo),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('cancel_order_button')),
+          findsNothing,
+          reason: 'Cancel Order button must not appear for status: ${status.name}',
+        );
+        expect(
+          find.text('Cancel Order'),
+          findsNothing,
+          reason: 'Cancel Order text must not appear for status: ${status.name}',
+        );
+      }
+    });
+
+    testWidgets('Test 3: Tapping Cancel Order opens confirmation dialog; Keep Order dismisses without cancelling', (tester) async {
+      final pendingOrder = sampleOrder.copyWith(
+        id: 'ORD-PENDING-3',
+        status: OrderStatus.pending,
+      );
+
+      final mockRepo = MockOrderRepository(
+        initialOrders: {
+          testUser.id: [pendingOrder],
+        },
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(orderId: 'ORD-PENDING-3', repository: mockRepo),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Cancel Order
+      final cancelBtn = find.byKey(const Key('cancel_order_button'));
+      expect(cancelBtn, findsOneWidget);
+      await tester.ensureVisible(cancelBtn);
+      await tester.tap(cancelBtn);
+      await tester.pumpAndSettle();
+
+      // Verify confirmation dialog
+      expect(find.text('Cancel Order?'), findsOneWidget);
+      expect(find.text('Keep Order'), findsOneWidget);
+      expect(find.text('Yes, Cancel'), findsOneWidget);
+
+      // Tap "Keep Order"
+      await tester.tap(find.text('Keep Order'));
+      await tester.pumpAndSettle();
+
+      // Dialog is dismissed and status remains pending
+      expect(find.text('Cancel Order?'), findsNothing);
+      expect(find.byKey(const Key('cancel_order_button')), findsOneWidget);
+
+      final storedOrder = await mockRepo.getOrderById(testUser.id, 'ORD-PENDING-3');
+      expect(storedOrder?.status, OrderStatus.pending);
+    });
+
+    testWidgets('Test 4: Confirming cancellation with Yes, Cancel invokes updateOrderStatus and updates status', (tester) async {
+      final pendingOrder = sampleOrder.copyWith(
+        id: 'ORD-PENDING-4',
+        status: OrderStatus.pending,
+      );
+
+      final mockRepo = MockOrderRepository(
+        initialOrders: {
+          testUser.id: [pendingOrder],
+        },
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(orderId: 'ORD-PENDING-4', repository: mockRepo),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Cancel Order
+      final cancelBtn = find.byKey(const Key('cancel_order_button'));
+      await tester.ensureVisible(cancelBtn);
+      await tester.tap(cancelBtn);
+      await tester.pumpAndSettle();
+
+      // Tap "Yes, Cancel"
+      await tester.tap(find.text('Yes, Cancel'));
+      await tester.pumpAndSettle();
+
+      // Verify repository was updated
+      final storedOrder = await mockRepo.getOrderById(testUser.id, 'ORD-PENDING-4');
+      expect(storedOrder?.status, OrderStatus.cancelled);
+
+      // Verify success snackbar
+      expect(find.text('Order #ORD-PENDING-4 has been cancelled.'), findsOneWidget);
+    });
+
+    testWidgets('Test 5: Successful cancellation naturally transitions UI to Order Cancelled timeline card', (tester) async {
+      final pendingOrder = sampleOrder.copyWith(
+        id: 'ORD-PENDING-5',
+        status: OrderStatus.pending,
+      );
+
+      final mockRepo = MockOrderRepository(
+        initialOrders: {
+          testUser.id: [pendingOrder],
+        },
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(orderId: 'ORD-PENDING-5', repository: mockRepo),
+      );
+      await tester.pumpAndSettle();
+
+      // Cancel the order
+      final cancelBtn = find.byKey(const Key('cancel_order_button'));
+      await tester.ensureVisible(cancelBtn);
+      await tester.tap(cancelBtn);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Yes, Cancel'));
+      await tester.pumpAndSettle();
+
+      // UI should now render the cancelled state from timeline
+      expect(find.text('Order Cancelled'), findsOneWidget);
+      expect(find.textContaining('This order has been cancelled successfully.'), findsOneWidget);
+      expect(find.byKey(const Key('cancel_order_button')), findsNothing);
+    });
+
+    testWidgets('Test 6: Failure in repository stops loading, shows error feedback, and order remains pending', (tester) async {
+      final pendingOrder = sampleOrder.copyWith(
+        id: 'ORD-PENDING-6',
+        status: OrderStatus.pending,
+      );
+
+      final failingRepo = _ErrorThrowingOrderRepository(
+        initialOrders: {
+          testUser.id: [pendingOrder],
+        },
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(orderId: 'ORD-PENDING-6', repository: failingRepo),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Cancel Order
+      final cancelBtn = find.byKey(const Key('cancel_order_button'));
+      await tester.ensureVisible(cancelBtn);
+      await tester.tap(cancelBtn);
+      await tester.pumpAndSettle();
+
+      // Confirm
+      await tester.tap(find.text('Yes, Cancel'));
+      await tester.pumpAndSettle();
+
+      // Verify error snackbar appears
+      expect(find.textContaining('Failed to cancel order'), findsOneWidget);
+
+      // Verify order is still pending and cancel button is still available
+      expect(find.byKey(const Key('cancel_order_button')), findsOneWidget);
+      expect(find.text('Order Cancelled'), findsNothing);
     });
   });
 }

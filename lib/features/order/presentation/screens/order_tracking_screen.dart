@@ -10,6 +10,7 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_state.dart';
 import '../../../../core/widgets/loading_indicator.dart';
 import '../../models/order_item_model.dart';
+import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
 import '../widgets/order_tracking_timeline.dart';
 
@@ -17,7 +18,7 @@ import '../widgets/order_tracking_timeline.dart';
 ///
 /// Reactively listens to Firestore document snapshots via [watchOrderByIdProvider]
 /// so status updates, timestamps, and details refresh automatically with zero manual polling.
-class OrderTrackingScreen extends ConsumerWidget {
+class OrderTrackingScreen extends ConsumerStatefulWidget {
   const OrderTrackingScreen({
     super.key,
     required this.orderId,
@@ -26,8 +27,103 @@ class OrderTrackingScreen extends ConsumerWidget {
   final String orderId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final orderStream = ref.watch(watchOrderByIdProvider(orderId));
+  ConsumerState<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
+}
+
+class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen> {
+  bool _isCancelling = false;
+
+  Future<void> _showCancelConfirmationDialog(
+    BuildContext context,
+    OrderModel order,
+  ) async {
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Cancel Order?',
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Your order #${order.id} is currently pending confirmation. '
+          'Cancelling this order is permanent and cannot be undone.',
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(
+              'Keep Order',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
+              ),
+            ),
+            child: Text(
+              'Yes, Cancel',
+              style: AppTypography.labelLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel == true && mounted) {
+      await _cancelOrder(order);
+    }
+  }
+
+  Future<void> _cancelOrder(OrderModel order) async {
+    if (_isCancelling) return;
+
+    setState(() => _isCancelling = true);
+
+    try {
+      final repository = ref.read(orderRepositoryProvider);
+      await repository.updateOrderStatus(order.id, OrderStatus.cancelled);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Order #${order.id} has been cancelled.'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel order: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCancelling = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final orderStream = ref.watch(watchOrderByIdProvider(widget.orderId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -65,7 +161,7 @@ class OrderTrackingScreen extends ConsumerWidget {
             child: ErrorState(
               title: 'Tracking Unavailable',
               message: error.toString(),
-              onRetry: () => ref.refresh(watchOrderByIdProvider(orderId)),
+              onRetry: () => ref.refresh(watchOrderByIdProvider(widget.orderId)),
             ),
           ),
         ),
@@ -76,7 +172,7 @@ class OrderTrackingScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: EmptyState(
                   title: 'Order Not Found',
-                  message: 'The requested order #$orderId could not be found.',
+                  message: 'The requested order #${widget.orderId} could not be found.',
                   icon: Icons.receipt_long_outlined,
                   actionText: 'View All Orders',
                   onAction: () => context.go('/orders'),
@@ -347,7 +443,46 @@ class OrderTrackingScreen extends ConsumerWidget {
 
                   const SizedBox(height: AppSpacing.lg),
 
-                  // 7. Navigation Actions
+                  // 7. Customer Cancellation Action (Visible ONLY when status is pending)
+                  if (order.status == OrderStatus.pending) ...[
+                    OutlinedButton.icon(
+                      key: const Key('cancel_order_button'),
+                      onPressed: _isCancelling
+                          ? null
+                          : () => _showCancelConfirmationDialog(context, order),
+                      icon: _isCancelling
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.error),
+                              ),
+                            )
+                          : const Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
+                      label: Text(
+                        _isCancelling ? 'Cancelling Order...' : 'Cancel Order',
+                        style: AppTypography.labelLarge.copyWith(
+                          color: _isCancelling ? AppColors.textTertiary : AppColors.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: BorderSide(
+                          color: _isCancelling ? AppColors.border : AppColors.error,
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
+
+                  // 8. Navigation Actions
                   if (order.restaurantId.isNotEmpty) ...[
                     AppButton(
                       text: 'Order Again from this Restaurant',

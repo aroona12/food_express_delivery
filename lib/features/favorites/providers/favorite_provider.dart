@@ -3,11 +3,12 @@ import '../../auth/providers/auth_provider.dart';
 import '../../restaurant/models/restaurant_model.dart';
 import '../../restaurant/providers/restaurant_provider.dart';
 import '../data/favorite_repository.dart';
+import '../data/firestore_favorite_repository.dart';
 import '../models/favorite_model.dart';
 
 /// Provider exposing the [FavoriteRepository] singleton for the app session.
 final favoriteRepositoryProvider = Provider<FavoriteRepository>((ref) {
-  return MockFavoriteRepository();
+  return FirestoreFavoriteRepository();
 });
 
 /// State notifier managing the set of favorited restaurant IDs for the active user.

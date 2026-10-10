@@ -298,6 +298,88 @@ class ProfileScreen extends ConsumerWidget {
                               color: AppColors.textTertiary),
                           onTap: () => EditProfileSheet.show(context, effectiveUser),
                         ),
+                        if (effectiveUser.role.isRestaurant || effectiveUser.role.isAdmin) ...[
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryContainer,
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: const Icon(Icons.storefront_rounded,
+                                  color: AppColors.primary, size: 20),
+                            ),
+                            title: Text(
+                              'Restaurant Management Portal',
+                              style: AppTypography.titleMedium.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Kitchen orders, menu & live metrics',
+                              style: AppTypography.bodySmall,
+                            ),
+                            trailing: const Icon(Icons.chevron_right_rounded,
+                                color: AppColors.primary),
+                            onTap: () => context.push('/restaurant/dashboard'),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.teal.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: const Icon(Icons.settings_suggest_rounded,
+                                  color: Colors.teal, size: 20),
+                            ),
+                            title: Text(
+                              'Store Profile & Settings',
+                              style: AppTypography.titleMedium.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.teal,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Manage name, hours, fees, bio & location',
+                              style: AppTypography.bodySmall,
+                            ),
+                            trailing: const Icon(Icons.chevron_right_rounded,
+                                color: Colors.teal),
+                            onTap: () => context.push('/restaurant/settings'),
+                          ),
+                        ],
+                        if (effectiveUser.role.isAdmin) ...[
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: const Icon(Icons.admin_panel_settings_rounded,
+                                  color: Colors.deepPurple, size: 20),
+                            ),
+                            title: Text(
+                              'System Admin Dashboard',
+                              style: AppTypography.titleMedium.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.deepPurple,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Global platform management & operations',
+                              style: AppTypography.bodySmall,
+                            ),
+                            trailing: const Icon(Icons.chevron_right_rounded,
+                                color: Colors.deepPurple),
+                            onTap: () => context.push('/admin/dashboard'),
+                          ),
+                        ],
                       ],
                     ),
                   ),

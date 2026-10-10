@@ -10,13 +10,6 @@ enum AppButtonVariant {
   outline,
 }
 
-/// A standardized, production-ready button widget for FoodExpress.
-///
-/// Features:
-/// - Supports [primary], [secondary], and [outline] variants.
-/// - Built-in [isLoading] spinner state.
-/// - Optional [prefixIcon] and [suffixIcon].
-/// - Customizable [width] and [height].
 class AppButton extends StatelessWidget {
   const AppButton({
     super.key,

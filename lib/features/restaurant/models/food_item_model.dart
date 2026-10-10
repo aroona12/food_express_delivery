@@ -70,18 +70,51 @@ class FoodItemModel {
     };
   }
 
+  static double _parseDouble(dynamic value, {double defaultValue = 0.0}) {
+    if (value == null) return defaultValue;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+
+  static double? _parseOptionalDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  static int? _parseOptionalInt(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  static bool _parseBool(dynamic value, {bool defaultValue = true}) {
+    if (value == null) return defaultValue;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final lower = value.trim().toLowerCase();
+      if (lower == 'true' || lower == '1' || lower == 'yes') return true;
+      if (lower == 'false' || lower == '0' || lower == 'no') return false;
+    }
+    return defaultValue;
+  }
+
   factory FoodItemModel.fromMap(Map<String, dynamic> map, [String? docId]) {
     return FoodItemModel(
-      id: (docId ?? map['id'] ?? '') as String,
-      restaurantId: (map['restaurantId'] ?? '') as String,
-      name: (map['name'] ?? '') as String,
-      description: (map['description'] ?? '') as String,
-      imageUrl: (map['imageUrl'] ?? '') as String,
-      price: (map['price'] as num?)?.toDouble() ?? 0.0,
-      category: (map['category'] ?? '') as String,
-      isAvailable: (map['isAvailable'] as bool?) ?? true,
-      rating: (map['rating'] as num?)?.toDouble(),
-      calories: (map['calories'] as num?)?.toInt(),
+      id: (docId ?? map['id'] ?? '').toString(),
+      restaurantId: (map['restaurantId'] ?? '').toString(),
+      name: (map['name'] ?? '').toString(),
+      description: (map['description'] ?? '').toString(),
+      imageUrl: (map['imageUrl'] ?? '').toString(),
+      price: _parseDouble(map['price']),
+      category: (map['category'] ?? '').toString(),
+      isAvailable: _parseBool(map['isAvailable']),
+      rating: _parseOptionalDouble(map['rating']),
+      calories: _parseOptionalInt(map['calories']),
     );
   }
 

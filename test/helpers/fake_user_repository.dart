@@ -70,6 +70,19 @@ class FakeUserRepository implements UserRepository {
     _getController(uid).add(updated);
   }
 
+  @override
+  Future<void> updateFcmToken({
+    required String uid,
+    required String token,
+  }) async {
+    final existing = _users[uid];
+    if (existing != null) {
+      final updated = existing.copyWith(fcmToken: token);
+      _users[uid] = updated;
+      _getController(uid).add(updated);
+    }
+  }
+
   void dispose() {
     for (final controller in _controllers.values) {
       controller.close();

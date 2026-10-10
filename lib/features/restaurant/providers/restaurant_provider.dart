@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/firestore_restaurant_repository.dart';
 import '../data/restaurant_repository.dart';
 import '../models/food_item_model.dart';
 import '../models/restaurant_model.dart';
 
-/// Exposes the [RestaurantRepository] instance. Overridable in widget and unit tests.
+/// Exposes the [RestaurantRepository] instance.
+/// Defaults to [FirestoreRestaurantRepository] for production persistence.
+/// Overridable in tests with [MockRestaurantRepository].
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) {
-  return MockRestaurantRepository();
+  return FirestoreRestaurantRepository();
 });
 
 /// Holds the active search query for restaurant discovery on the Home screen.
@@ -40,7 +43,15 @@ final restaurantByIdProvider =
   return repository.getRestaurantById(restaurantId);
 });
 
-/// Fetches all food items for a specific [restaurantId].
+/// StreamProvider family emitting live real-time menu items for a specific [restaurantId].
+final foodItemsStreamProvider =
+    StreamProvider.family<List<FoodItemModel>, String>((ref, restaurantId) {
+  if (restaurantId.isEmpty) return Stream.value(<FoodItemModel>[]);
+  final repository = ref.watch(restaurantRepositoryProvider);
+  return repository.watchFoodItems(restaurantId);
+});
+
+/// Fetches all food items for a specific [restaurantId] once.
 final foodItemsProvider =
     FutureProvider.family<List<FoodItemModel>, String>((ref, restaurantId) async {
   final repository = ref.watch(restaurantRepositoryProvider);
@@ -58,11 +69,19 @@ final menuCategoriesProvider =
 final selectedMenuCategoryProvider =
     StateProvider.family<String, String>((ref, restaurantId) => 'All');
 
-/// Fetches menu food items for a specific [restaurantId], filtered by the currently selected menu category.
+/// Provides menu food items for a specific [restaurantId], filtered by the currently selected menu category,
+/// dynamically mapped from [foodItemsStreamProvider] for instant real-time reactivity.
 final filteredFoodItemsProvider =
-    FutureProvider.family<List<FoodItemModel>, String>((ref, restaurantId) async {
-  final repository = ref.watch(restaurantRepositoryProvider);
+    Provider.family<AsyncValue<List<FoodItemModel>>, String>((ref, restaurantId) {
+  final itemsAsync = ref.watch(foodItemsStreamProvider(restaurantId));
   final selectedCategory = ref.watch(selectedMenuCategoryProvider(restaurantId));
 
-  return repository.getFoodItemsByCategory(restaurantId, selectedCategory);
+  return itemsAsync.whenData((items) {
+    if (selectedCategory.isEmpty || selectedCategory.toLowerCase() == 'all') {
+      return items;
+    }
+    return items
+        .where((item) => item.category.toLowerCase() == selectedCategory.toLowerCase())
+        .toList();
+  });
 });

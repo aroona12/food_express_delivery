@@ -1,262 +1,301 @@
-# 🍔 FoodExpress — Food Delivery & Restaurant Management App
+# 🍔 FoodExpress — Full-Stack Food Delivery & Restaurant Management App
 
-[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
-[![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev/)
-[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Riverpod](https://img.shields.io/badge/Riverpod-00599C?style=for-the-badge&logo=flutter&logoColor=white)](https://riverpod.dev/)
-[![Tests](https://img.shields.io/badge/Tests-215%20Passed-success?style=for-the-badge)](https://github.com/)
-[![Analyzer](https://img.shields.io/badge/flutter%20analyze-0%20Issues-brightgreen?style=for-the-badge)](https://github.com/)
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.11-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20FCM-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Riverpod](https://img.shields.io/badge/Riverpod-2.6.1-00599C?style=for-the-badge&logo=flutter&logoColor=white)](https://riverpod.dev/)
+[![Tests](https://img.shields.io/badge/Tests-416%20Passed-success?style=for-the-badge)](https://flutter.dev/)
+[![Analyzer](https://img.shields.io/badge/flutter%20analyze-0%20Issues-brightgreen?style=for-the-badge)](https://flutter.dev/)
 
-**FoodExpress** is a production-grade, full-featured food ordering and restaurant management mobile application built with **Flutter**, **Riverpod**, and **Firebase**. It demonstrates enterprise-level mobile architecture, feature-first Clean Architecture, reactive state management, Cloud Firestore persistence, real-time order tracking via document streams, and comprehensive test-driven development with 100% test pass rate.
+**FoodExpress** is a multi-role food ordering, kitchen management, and platform administration mobile application built with **Flutter**, **Dart**, **Riverpod 2.x**, and **Firebase** (Authentication, Cloud Firestore, and Firebase Cloud Messaging). 
 
----
-
-## 📸 Overview & Key Highlights
-
-* **Architecture**: Feature-First Clean Architecture with strictly decoupled domain entities, repository interfaces, and presentation layers.
-* **State Management**: Reactive, testable state management using Riverpod (`StateNotifier`, `StreamProvider`, `FutureProvider`, family providers, and provider overrides for zero-dependency widget tests).
-* **Cloud Database**: Cloud Firestore integration for user profiles (`users/{userId}`) and customer orders (`orders/{orderId}`).
-* **Real-Time Tracking**: Live order status tracking powered by Firestore document snapshot streams (`.snapshots()`) with **zero polling timers**.
-* **Declarative Routing**: Dynamic routing via GoRouter with real-time authentication guard redirects and deep-linking support.
-* **UI & Design System**: Material 3 theming with custom brand color palettes, Google Fonts (Poppins), custom reusable components, and smooth micro-animations.
-* **Test Coverage**: **215 automated unit, widget, and navigation tests** passing across all feature modules with **0 analyzer issues**.
+Designed following **Feature-First Clean Architecture**, the codebase strictly separates presentation, domain entities, and data persistence via the **Repository Pattern**. It provides real-time Firestore document snapshot streaming, role-based access control (RBAC), declarative routing, and comprehensive automated test coverage with **416 passing tests** across 48 suites.
 
 ---
 
-## 🚀 Implemented Features (Days 1–8)
+## 📸 Screenshots & UI Showcase
 
-### 1. 🔐 Customer Authentication & Route Guards
-* **Firebase Authentication**: Email and password registration, login, logout, and password recovery.
+> [!NOTE]
+> *To add screenshots to this repository, place your captured `.png` or `.webp` files in an `assets/screenshots/` folder and link them below.*
+
+| Customer Home & Discovery | Restaurant Menu & Cart | Real-Time Order Tracking |
+| :---: | :---: | :---: |
+| *(Add screenshot: `assets/screenshots/customer_home.png`)* | *(Add screenshot: `assets/screenshots/restaurant_menu.png`)* | *(Add screenshot: `assets/screenshots/order_tracking.png`)* |
+
+| Restaurant Owner Dashboard | Kitchen Orders Queue | System Admin Telemetry |
+| :---: | :---: | :---: |
+| *(Add screenshot: `assets/screenshots/restaurant_dashboard.png`)* | *(Add screenshot: `assets/screenshots/kitchen_orders.png`)* | *(Add screenshot: `assets/screenshots/admin_dashboard.png`)* |
+
+---
+
+## ✨ Key Features (Verified Implementation)
+
+### 🔐 1. Authentication & Role-Based Access Control (RBAC)
+* **Firebase Authentication**: Email and password user registration, login, logout, and password reset flows.
 * **Session Persistence**: Automatic session restoration via `authStateChanges` stream.
-* **Declarative Auth Guards**: GoRouter redirects unauthenticated users away from protected routes (`/profile`, `/cart`, `/checkout`, `/orders`, `/favorites`) directly to `/login`.
-* **Form Validation**: Real-time email formatting, password strength checks, and descriptive error banners.
+* **Asynchronous Profile Resolution**: Router defers role-based navigation decisions until the Firestore profile stream emits, eliminating race conditions and redirect flickers.
+* **Declarative Route Guards**: Protected portals guarded by role:
+  - **Customers** land on `/home` and cannot access restaurant management or admin routes.
+  - **Restaurant Owners** automatically land on `/restaurant/dashboard` and are redirected away from customer landing routes.
+  - **Platform Admins** automatically land on `/admin/dashboard` and are redirected away from `/home`.
+  - **Unauthenticated Users** attempting to access protected routes (`/cart`, `/checkout`, `/orders`, `/profile`, `/restaurant/*`, `/admin/*`) are routed to `/login`.
 
-### 2. 👤 Customer Profile & Cloud Firestore
-* **Profile Synchronization**: Automatic document creation and retrieval in Cloud Firestore (`users/{userId}`).
-* **Edit Profile**: Modal bottom sheet for updating full name, phone number, and delivery address.
-* **Fallback Safety**: Graceful fallback to Firebase Auth metadata during network latency or offline startup.
+### 🛍️ 2. Customer Experience
+* **Restaurant Discovery**: Browsing restaurants with cuisine tags, delivery times, estimated fees, ratings, and open/closed operational indicators.
+* **Instant Keyword Search & Filtering**: Real-time filtering by restaurant name, cuisine, and food item categories.
+* **Categorized Menu Inspection**: Categorized menu display with dish descriptions, pricing, and live availability toggles.
+* **In-Memory Cart Management**: Single-restaurant cart enforcement, dynamic item quantity increments/decrements, live subtotal computation, and persistent navigation bar badge counts.
+* **Customer Favorites**: Instant bookmarking of favorite restaurants with user-scoped persistence.
+* **Address Book**: Full CRUD operations for customer delivery addresses (Home, Work, Other) with default selection and checkout address switching.
+* **Checkout Flow**: Comprehensive review of selected address, itemized dish summary, delivery notes, and billing breakdown.
+* **Real-Time Order Tracking**: Live tracking screen streaming Firestore document snapshots via `watchOrderById` with a 5-step visual progression timeline (`pending` → `confirmed` → `preparing` → `outForDelivery` → `delivered` / `cancelled`).
+* **Customer Order Cancellation**: Allows customers to cancel orders while in `pending` status, with Firestore security rules preventing tampering with order amounts or cancellation of processed orders.
+* **In-App Notification Center**: User-scoped notification center displaying order status updates and read/unread state management.
 
-### 3. 🍽️ Restaurant Discovery & Menu Browsing
-* **Explore Restaurants**: Rich restaurant cards displaying ratings, review counts, cuisines, delivery estimates, fees, and open/closed badges.
-* **Category Filtering**: Horizontal category filter pills (Burgers, Pizza, Asian, Desserts, Beverages, Healthy).
-* **Live Search**: Instant keyword search filtering restaurants by name, cuisine, and menu offerings.
-* **Restaurant Details & Menu**: Hero banner images, categorized menu sections, dish descriptions, pricing, and availability tags.
+### 🍳 3. Restaurant Owner Portal
+* **Operational Dashboard**: Real-time metrics tracking pending, confirmed, preparing, out-for-delivery, and delivered orders alongside calculated gross revenue.
+* **Store Open / Closed Switch**: Live toggle updating restaurant operational status in Cloud Firestore.
+* **Kitchen Order Queue**: Live order stream allowing kitchen staff to advance order lifecycle statuses sequentially.
+* **Menu CRUD Management**: Full modal dialog for adding, editing, and deleting dishes with custom pricing, categories, and stock availability toggles.
+* **Store Settings Editor**: Direct editing of restaurant metadata (name, description, cuisine, address, delivery fee, delivery time).
+* **Missing Store Safety**: Displays a `"Store Not Configured"` state when a linked restaurant document is missing, avoiding misleading fallback values.
 
-### 4. 🛒 Cart Management & Quantity Controls
-* **In-Memory Cart**: Fast shopping cart with single-restaurant enforcement (prompts user before switching restaurants).
-* **Quantity Controls**: Add dishes, increment/decrement quantities, or remove items directly with real-time subtotal computation.
-* **Reactive Badges**: Live cart badge on the home navigation bar showing active item count.
-
-### 5. ❤️ Customer Favorites
-* **Optimistic Bookmarking**: Instant UI toggle for saving and removing favorite restaurants.
-* **Dedicated Favorites Screen**: Accessible from the customer profile with empty state illustrations and quick restaurant access.
-
-### 6. 📍 Delivery Address Management
-* **Address Book**: Full CRUD operations for customer delivery addresses (Home, Work, Other) with default address toggling.
-* **Interactive Selection**: Dedicated selection mode allowing customers to pick or switch delivery addresses seamlessly during checkout.
-
-### 7. 💳 Customer Checkout Flow
-* **Comprehensive Review Screen**: Displays selected delivery address, fulfilling restaurant, itemized dish list, optional delivery notes, and bill summary (subtotal, delivery fee, grand total).
-* **Payment Preview**: Pre-configured for Cash on Delivery (payment gateway integration planned for upcoming milestones).
-* **Atomic Order Placement**: Persists order payload to Cloud Firestore and clears the shopping cart **only after** write confirmation succeeds. If network fails, cart dishes are preserved.
-
-### 8. 📦 Persistent Orders & Real-Time Order Tracking
-* **Cloud Firestore Orders**: Placed orders are stored under `orders/{orderId}` with server timestamps (`FieldValue.serverTimestamp()`) and user-scoped data.
-* **Order Confirmation Screen (`/order-success/:orderId`)**: Displays confirmation celebration, generated Order ID badge (`#ORD-xxxxx`), restaurant details, total amount, and quick navigation CTAs.
-* **Live Order Tracking Screen (`/orders/:orderId`)**: Subscribes directly to Firestore document snapshots via `watchOrderByIdProvider` to stream status updates in real-time without manual page refreshing.
-* **Multi-Stage Visual Timeline**: Animated 5-step status progression (`pending` → `confirmed` → `preparing` → `outForDelivery` → `delivered`) with glowing active indicators, completed checkmarks, and dedicated cancellation cards.
-* **Order History (`/orders`)**: Chronological past orders list displaying fulfilling restaurant, total amount, formatted date, and one-tap access to live tracking.
+### 🛡️ 4. System Administration & Platform Management
+* **Admin Dashboard**: Centralized management portal featuring four dedicated tabs:
+  - **Platform Telemetry**: Aggregated order volume, revenue metrics, and user counts.
+  - **Restaurant Catalog**: Global inspection of all registered restaurant stores.
+  - **Global Orders**: Platform-wide order oversight across all restaurants.
+  - **User Directory**: Directory of registered users and assigned roles.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Framework** | Flutter (Dart SDK ^3.11.1) | Cross-platform mobile client application |
-| **Authentication** | Firebase Auth (`firebase_auth: ^6.5.7`) | Secure user registration, authentication, and session handling |
-| **Cloud Database** | Cloud Firestore (`cloud_firestore: ^6.8.0`) | User profiles, persistent orders, and real-time snapshot listeners |
-| **Firebase Core** | `firebase_core: ^4.13.0` | Firebase project runtime initialization |
-| **State Management** | Riverpod (`flutter_riverpod: ^2.6.1`) | Reactive state management, dependency injection, and family providers |
-| **Routing** | GoRouter (`go_router: ^14.8.1`) | Declarative navigation, route guards, and path parameter extraction |
-| **Typography** | Google Fonts (`google_fonts: ^6.2.1`) | Poppins typographic scale |
-| **Design System** | Material 3 (Custom AppTheme) | Consistent color tokens, typography, button styles, and cards |
-| **Linting** | `flutter_lints: ^6.0.0` | Static analysis and best practice enforcement |
-| **Testing** | `flutter_test` (Flutter SDK) | Unit, widget, provider, and navigation integration testing |
-
-> [!NOTE]
-> All networking and database operations utilize official, type-safe FlutterFire client SDKs. The third-party `http` package is **not used** in this project.
+| Layer | Technology | Package / Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Client Framework** | Flutter | SDK `^3.11.1` (Dart 3.x) | Cross-platform UI development (Android, iOS, Web, Desktop) |
+| **State Management** | Flutter Riverpod | `flutter_riverpod: ^2.6.1` | Reactive state management, dependency injection, and family providers |
+| **Navigation & Routing** | GoRouter | `go_router: ^14.8.1` | Declarative routing, deep linking, and RBAC redirect guards |
+| **Authentication** | Firebase Auth | `firebase_auth: ^6.6.1` | User identity, email/password credentials, and session streams |
+| **Cloud Database** | Cloud Firestore | `cloud_firestore: ^6.8.0` | Real-time document streaming, user subcollections, and orders |
+| **Push Notifications** | Firebase Messaging | `firebase_messaging: ^16.6.0` | Device FCM token synchronization and push messaging client hooks |
+| **Core Firebase** | Firebase Core | `firebase_core: ^4.14.0` | Firebase project runtime initialization |
+| **Design System** | Material 3 & Google Fonts | `google_fonts: ^6.2.1` | Custom color palette, Poppins typography scale, and reusable components |
+| **Code Quality** | Flutter Lints | `flutter_lints: ^6.0.0` | Static analysis and strict linting rules |
+| **Testing** | Flutter Test | `flutter_test` (Flutter SDK) | Unit, widget, provider, and route navigation integration tests |
 
 ---
 
 ## 🏛️ Architecture & Project Structure
 
-The project follows a **Feature-First Clean Architecture** pattern. Each domain feature encapsulates its own data sources, domain models, presentation screens/widgets, and Riverpod providers.
+The project follows a **Feature-First Architecture** supported by a shared `core/` module. Each feature encapsulates its own data models, repositories (with Firestore and in-memory mock implementations), presentation screens, widgets, and Riverpod controllers.
 
 ```
 lib/
 ├── core/
-│   ├── constants/            # AppColors, AppTypography, AppDimensions
-│   ├── mock/                 # Isolated mock data for offline previews & tests
-│   ├── routing/              # AppRouter with reactive authentication guards
-│   ├── theme/                # Centralized Material 3 ThemeData
+│   ├── constants/            # Design tokens: AppColors, AppTypography, AppDimensions
+│   ├── mock/                 # In-memory mock data for offline testing & widget previews
+│   ├── routing/              # AppRouter (GoRouter setup, RBAC redirect guards, RefreshNotifier)
+│   ├── services/             # Core application services
+│   ├── theme/                # Material 3 theme configuration (AppTheme.lightTheme)
 │   └── widgets/              # Reusable UI components (AppButton, AppTextField, AppCard, etc.)
 ├── features/
-│   ├── address/              # Delivery address management (CRUD & selection)
-│   │   ├── data/             # AddressRepository & MockAddressRepository
-│   │   ├── models/           # AddressModel domain entity
-│   │   ├── presentation/     # AddressListScreen, AddEditAddressScreen & widgets
-│   │   └── providers/        # AddressListNotifier & selectedAddressProvider
-│   ├── auth/                 # Customer Authentication
-│   │   ├── data/             # AuthRepository & FirebaseAuthRepository
-│   │   ├── models/           # UserModel & UserRole domain entities
-│   │   ├── presentation/     # LoginScreen, RegisterScreen, ForgotPasswordScreen
-│   │   └── providers/        # AuthController & currentUserProvider
-│   ├── cart/                 # Shopping Cart & Quantity Controls
-│   │   ├── models/           # CartModel & CartItemModel domain entities
-│   │   ├── presentation/     # CartScreen & widgets
-│   │   └── providers/        # CartController & cartProvider
-│   ├── checkout/             # Customer Checkout & Confirmation
-│   │   ├── models/           # CheckoutModel domain entity
-│   │   ├── presentation/     # CheckoutScreen, OrderSuccessScreen & widgets
-│   │   └── providers/        # CheckoutController & checkoutProvider
-│   ├── favorites/            # Customer Restaurant Favorites
-│   │   ├── data/             # FavoriteRepository & MockFavoriteRepository
-│   │   ├── models/           # FavoriteModel domain entity
-│   │   ├── presentation/     # FavoritesScreen & widgets
-│   │   └── providers/        # FavoriteController & favoriteRestaurantsProvider
-│   ├── home/                 # Discovery & Navigation
-│   │   └── presentation/     # HomeScreen, HomeAppBar, HomeSearchBar, CategoryList
-│   ├── order/                # Order Placement & Real-Time Tracking
-│   │   ├── data/             # OrderRepository, FirestoreOrderRepository, MockOrderRepository
-│   │   ├── models/           # OrderModel, OrderItemModel, OrderStatus enum
-│   │   ├── presentation/     # OrderTrackingScreen, OrderHistoryScreen, OrderTrackingTimeline
-│   │   └── providers/        # watchOrderByIdProvider, orderHistoryStreamProvider
-│   ├── profile/              # Customer Profile Management
-│   │   ├── data/             # UserRepository & FirestoreUserRepository
-│   │   ├── presentation/     # ProfileScreen & EditProfileSheet
-│   │   └── providers/        # UserController & userProfileProvider
-│   └── restaurant/           # Restaurant Discovery & Menu Browsing
-│       ├── data/             # RestaurantRepository & MockRestaurantRepository
-│       ├── models/           # RestaurantModel & FoodItemModel
-│       ├── presentation/     # RestaurantDetailsScreen, FoodItemCard, Header
-│       └── providers/        # restaurantByIdProvider, foodItemsByRestaurantProvider
-├── firebase_options.dart     # FlutterFire generated platform configurations
-└── main.dart                 # Application entry point with Firebase & ProviderScope
+│   ├── address/              # Address models, AddressRepository, AddressListScreen, AddEditAddressScreen
+│   ├── admin/                # Admin models, FirestoreAdminRepository, AdminDashboardScreen & tabs
+│   ├── auth/                 # UserModel, AuthRepository, LoginScreen, RegisterScreen, ForgotPasswordScreen
+│   ├── cart/                 # CartItemModel, CartController, CartScreen
+│   ├── checkout/             # CheckoutScreen, OrderSuccessScreen, CheckoutController
+│   ├── favorites/            # FavoriteModel, FavoriteRepository, FavoritesScreen
+│   ├── home/                 # HomeScreen, HomeAppBar, CategoryChips, RestaurantCard
+│   ├── notifications/        # NotificationModel, NotificationRepository, NotificationScreen, NotificationEventBridge
+│   ├── order/                # OrderModel, OrderRepository, OrderHistoryScreen, OrderTrackingScreen, Timeline
+│   ├── profile/              # UserRepository, ProfileScreen, EditProfileSheet, UserController
+│   └── restaurant/           # RestaurantModel, FoodItemModel, RestaurantDashboardScreen, MenuScreen, SettingsScreen
+├── firebase_options.dart     # Generated FlutterFire configuration
+└── main.dart                 # Application entry point with ProviderScope initialization
 ```
 
 ---
 
-## 🔒 Security & Firestore Rules
+## 🔄 Application Workflow
 
-Database security is enforced at the Cloud Firestore rules level with zero-trust, user-scoped access control:
-
-* **Customer Profiles (`users/{userId}`)**: Authenticated customers can only read and write their own profile document (`request.auth.uid == userId`).
-* **Customer Orders (`orders/{orderId}`)**:
-  * `create`: Allowed only when the authenticated user's UID matches the order's `userId` field (`request.resource.data.userId == request.auth.uid`).
-  * `read, update`: Allowed only for the customer who created the order (`resource.data.userId == request.auth.uid`).
-  * `delete`: Blocked by default (`false`) to ensure audit trail integrity.
-* **Credentials Safety**: Sensitive client configuration files (`google-services.json`, `GoogleService-Info.plist`), keystores (`*.jks`, `*.keystore`), signing properties (`key.properties`), and environment secrets (`.env*`) are strictly excluded via `.gitignore`.
+```mermaid
+flowchart TD
+    Start([App Launch]) --> AuthCheck{Authenticated?}
+    
+    AuthCheck -- No --> Login[/Login Screen/]
+    Login --> Register[/Register Screen/]
+    Login --> ForgotPass[/Forgot Password Screen/]
+    Login --> Authenticate[Sign In with Firebase Auth]
+    
+    AuthCheck -- Yes --> ProfileResolve[Resolve Firestore Profile Stream]
+    Authenticate --> ProfileResolve
+    
+    ProfileResolve --> RoleCheck{User Role}
+    
+    RoleCheck -- Customer --> Home[/Customer Home Screen/]
+    RoleCheck -- Restaurant Owner --> RestDash[/Restaurant Dashboard/]
+    RoleCheck -- Admin --> AdminDash[/Admin Dashboard/]
+    
+    subgraph Customer Workflow
+        Home --> BrowseRest[Browse & Search Restaurants]
+        BrowseRest --> RestDetails[/Restaurant Details & Menu/]
+        RestDetails --> AddToCart[Add Dishes to Cart]
+        AddToCart --> CartScreen[/Cart Screen/]
+        CartScreen --> Checkout[/Checkout Screen/]
+        Checkout --> SelectAddress[Select Delivery Address]
+        SelectAddress --> PlaceOrder[Place Order Atomic Write to Firestore]
+        PlaceOrder --> OrderSuccess[/Order Success Screen/]
+        OrderSuccess --> OrderTracking[/Live Order Tracking Screen/]
+        OrderTracking --> CancelOrder{Cancel if Pending}
+        CancelOrder -- Yes --> CancelledStatus[Update status to cancelled]
+    end
+    
+    subgraph Restaurant Operations
+        RestDash --> ToggleStore[Toggle Store Open/Closed]
+        RestDash --> ManageMenu[/Menu Management - Add/Edit Dishes/]
+        RestDash --> LiveOrders[/Kitchen Live Orders Stream/]
+        LiveOrders --> AdvanceStatus[Advance Status: Confirmed -> Preparing -> Out for Delivery -> Delivered]
+        RestDash --> StoreSettings[/Store Profile & Delivery Settings/]
+    end
+    
+    subgraph Admin Management
+        AdminDash --> Tab1[Platform Telemetry & Metrics]
+        AdminDash --> Tab2[Restaurant Catalog Inspection]
+        AdminDash --> Tab3[Global Orders Supervision]
+        AdminDash --> Tab4[User Directory & Role Auditing]
+    end
+```
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## 🔒 Firebase Integration & Security Architecture
 
-The codebase includes an extensive automated test suite covering domain serialization, repository operations, Riverpod state notifiers, widget rendering, and end-to-end navigation flows:
+### 1. Firestore Data Collections
+* **`users/{userId}`**: Stores user domain metadata (`name`, `email`, `role`, `restaurantId`, `phone`, `address`, `fcmToken`, `createdAt`).
+  - **`users/{userId}/addresses/{addressId}`**: Customer saved delivery locations.
+  - **`users/{userId}/favorites/{favoriteId}`**: Customer bookmarked restaurant IDs.
+  - **`users/{userId}/notifications/{notificationId}`**: User-scoped push/in-app notification documents.
+* **`restaurants/{restaurantId}`**: Public restaurant discovery metadata (`name`, `cuisine`, `rating`, `isOpen`, `deliveryFee`, `deliveryTime`).
+  - **`restaurants/{restaurantId}/menu_items/{itemId}`**: Dish entries with pricing, description, and availability.
+* **`orders/{orderId}`**: Customer orders containing customer UID, fulfilling restaurant ID, itemized dish payloads, totals, and timestamps.
 
-```
-test/
-├── features/
-│   ├── address/              # Address repository, model, and screen widget tests
-│   ├── auth/                 # Authentication controller, models, and screen tests
-│   ├── cart/                 # Cart controller, model, and navigation tests
-│   ├── checkout/             # Checkout controller, review screen, and order success tests
-│   ├── favorites/            # Favorite repository, model, and screen tests
-│   ├── home/                 # Home screen and discovery widget tests
-│   ├── order/                # Order repository, stream providers, tracking timeline, and screen tests
-│   ├── profile/              # Profile controller, repository, and screen tests
-│   └── restaurant/           # Restaurant repository, menu providers, and card tests
-├── helpers/                  # Test fakes (FakeAuthRepository, FakeUserRepository)
-└── widget_test.dart          # Root application smoke tests
-```
-
-### Running Tests & Analyzer
-```bash
-# Run static analyzer (0 issues)
-flutter analyze
-
-# Run all 215 automated tests (100% passing)
-flutter test
-```
+### 2. Firestore Security Rules Summary
+The application includes a strictly audited [`firestore.rules`](file:///c:/Users/PMLS/Desktop/foodexpressdelivery/firestore.rules) file enforcing the principle of least privilege:
+* **Role Elevation Defense**: Users cannot mutate their own `role` or `restaurantId` fields.
+* **Subcollection Isolation**: Notifications and addresses can only be read, modified, or deleted by their verified owner or an administrator.
+* **Notification Tampering Prevention**: Users updating notification documents are restricted to modifying `isRead`.
+* **Order Creation Constraints**: Requires authenticated user identity binding (`userId == auth.uid`), initial `status == 'pending'`, non-negative totals (`subtotal`, `deliveryFee`, `total`), and a non-empty `items` list.
+* **Order Cancellation Rules**: Customers can only cancel their own orders, only while the database status is `pending`, and can only mutate `status` (to `cancelled`) and `updatedAt`.
+* **Restaurant Boundary Enforcement**: Restaurant owners can only update orders and menu items matching their assigned `restaurantId`.
 
 ---
 
-## ⚡ Getting Started
+## 🚀 Installation and Setup
 
 ### Prerequisites
-* [Flutter SDK](https://docs.flutter.dev/get-started/install) (`^3.11.1` or higher)
+* [Flutter SDK](https://docs.flutter.dev/get-started/install) (`^3.11.1` or later)
 * [Dart SDK](https://dart.dev/get-dart)
-* Android Studio / Xcode / VS Code
-* Chrome / Edge (for Web) or an Android/iOS emulator/device
+* [Android Studio](https://developer.android.com/studio) / Xcode (for mobile emulators or physical device builds)
+* [Firebase CLI](https://firebase.google.com/docs/cli) (optional, for deploying security rules and indexes)
 
-### Installation & Setup
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-username/foodexpressdelivery.git
+cd foodexpressdelivery
+```
 
-1. **Clone the Repository:**
+### 2. Install Flutter Dependencies
+```bash
+flutter pub get
+```
+
+### 3. Firebase Configuration
+To connect the app to your own Firebase project:
+1. Create a project in the [Firebase Console](https://console.firebase.google.com/).
+2. Enable **Firebase Authentication** with the **Email/Password** sign-in provider.
+3. Enable **Cloud Firestore** in production or test mode.
+4. Run FlutterFire CLI to generate your `firebase_options.dart`:
    ```bash
-   git clone https://github.com/your-username/foodexpress.git
-   cd foodexpress
+   flutterfire configure
    ```
-
-2. **Install Dependencies:**
+5. Deploy the provided Firestore Security Rules and Composite Indexes:
    ```bash
-   flutter pub get
-   ```
-
-3. **Configure Firebase (Optional for Local Development):**
-   * If connecting to your own Firebase project, install the [FlutterFire CLI](https://firebase.flutter.dev/docs/cli/):
-     ```bash
-     dart pub global activate flutterfire_cli
-     flutterfire configure
-     ```
-   * Download and place `google-services.json` inside `android/app/` for Android execution.
-   * Deploy Firestore security rules:
-     ```bash
-     firebase deploy --only firestore:rules
-     ```
-
-4. **Run Automated Tests:**
-   ```bash
-   flutter test
-   ```
-
-5. **Launch the Application:**
-   ```bash
-   # Run on Chrome (Web)
-   flutter run -d chrome
-
-   # Run on connected Android / iOS device
-   flutter run
+   firebase deploy --only firestore:rules,firestore:indexes
    ```
 
 ---
 
-## 🗺️ 10-Day Development Roadmap
+## 📱 Running the Application
 
-- [x] **Day 1: Foundation & UI Design System** — Centralized theme, color tokens, typography, reusable components.
-- [x] **Day 2: Customer Authentication** — Firebase Auth, login/register forms, password reset, session persistence.
-- [x] **Day 3: Customer Profile & Cloud Firestore** — Firestore user document syncing, profile edit sheet.
-- [x] **Day 4: Restaurant Discovery & Menu Browsing** — Restaurant catalog, category filtering, search, dish detail.
-- [x] **Day 5: Cart Management & Quantity Controls** — In-memory cart, quantity controls, single-restaurant validation.
-- [x] **Day 6: Favorites & Order History** — Optimistic favorite bookmarks, chronological order history with item breakdown.
-- [x] **Day 7: Delivery Address & Checkout Flow** — Delivery address CRUD, selection mode, full checkout review screen.
-- [x] **Day 8: Order Placement & Real-Time Order Tracking** — Cloud Firestore order creation, post-success cart clearing, live status tracking via Firestore streams, 5-stage visual progress timeline.
-- [ ] **Day 9: Restaurant/Admin Dashboard & Menu Management** — *(Planned)* Restaurant owner portal, order status updates, menu item CRUD.
-- [ ] **Day 10: Role-Based Routing, Push Notifications & Production Polish** — *(Planned)* Role-based access control (Customer/Admin/Rider), FCM push notifications, app polishing.
+### Run in Debug Mode
+Connect an Android device, iOS simulator, or desktop browser, and execute:
+```bash
+flutter run
+```
+
+### Build Android Debug APK
+```bash
+flutter build apk --debug
+```
+The output APK is generated at:
+`build/app/outputs/flutter-apk/app-debug.apk`
 
 ---
 
-## 💼 Portfolio Project Status
+## 🧪 Testing and Code Quality
 
-This repository is maintained as a clean, production-ready portfolio project demonstrating modern Flutter engineering standards, reactive data flow, test isolation, and real-time cloud database integration.
+The project employs comprehensive automated test suites using `flutter_test`, leveraging Riverpod provider overrides to test domain logic and widgets in complete isolation without live backend dependencies.
 
-Developed with ❤️ using Flutter & Firebase.
+### Run Static Analysis
+```bash
+flutter analyze
+```
+*Current result: `No issues found!` (0 errors, 0 warnings, 0 lints).*
+
+### Run Automated Tests
+```bash
+flutter test
+```
+*Current result: **416 passing tests across 48 test suites** with 0 failures.*
+
+### Test Suite Highlights
+* **Auth & Routing Tests**: Role-based access control, router race-condition handling, stream loading state transitions, and unauthenticated redirects.
+* **Order & Tracking Tests**: Timeline state rendering, order cancellation validation, invalid status transition rejection, and protected field immutability.
+* **Restaurant Portal Tests**: Missing store state (`"Store Not Configured"`), error retry mechanisms, and open/closed switch toggling.
+* **Cart & Checkout Tests**: Quantity increment/decrement math, single-restaurant enforcement, and atomic order placement.
+
+---
+
+## ⚠️ Known Limitations & Future Roadmap
+
+* **Server-Side Cross-User Notifications**: In accordance with Firestore security rules, client devices cannot write directly to other users' notification subcollections. Cross-user notifications (e.g. notifying a restaurant owner when a customer creates an order) must be handled by server-side Firebase Cloud Functions (e.g. `onDocumentCreated('orders/{orderId}')`) using the Firebase Admin SDK.
+* **Server-Side Price Validation**: Current order placement totals are computed client-side. A production payment pipeline should recalculate line-item prices against Firestore menu data via a trusted Cloud Function before finalizing transactions.
+* **Payment Gateway Integration**: Checkout currently defaults to Cash on Delivery. Integration with Stripe or PayPal is planned for future releases.
+* **Dynamic Homepage Categories**: Category filter pills are currently sourced from core category mock definitions rather than a dynamic Firestore categories catalog.
+
+---
+
+## 📊 Project Status
+
+* **Dart & Flutter Codebase**: Fully verified with **416 passing tests** and **0 analyzer issues**.
+* **Android Build Pipeline**: Verified (`flutter build apk --debug` builds successfully).
+* **Production Readiness**: **Blocked by Unverified Live Configuration** pending live deployment of `firestore.rules`, composite indexes, and server-side Cloud Function triggers to an active Firebase production instance.
+
+---
+
+## 🤝 Contributing
+
+Contributions, bug reports, and feature proposals are welcome.
+1. Fork the Project.
+2. Create a Feature Branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
+4. Ensure all tests pass (`flutter test && flutter analyze`).
+5. Push to the Branch (`git push origin feature/AmazingFeature`).
+6. Open a Pull Request.
+
+---
+
+## 📄 License
+
+This repository does not currently have an explicit open-source license file attached. All rights are reserved by the repository owner.

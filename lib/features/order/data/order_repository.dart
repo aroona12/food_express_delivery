@@ -23,6 +23,15 @@ abstract class OrderRepository {
 
   /// Streams real-time updates for all orders belonging to [userId].
   Stream<List<OrderModel>> watchOrders(String userId);
+
+  /// Fetches all orders belonging to a specific restaurant identified by [restaurantId].
+  Future<List<OrderModel>> getRestaurantOrders(String restaurantId);
+
+  /// Streams real-time updates for all orders belonging to [restaurantId].
+  Stream<List<OrderModel>> watchRestaurantOrders(String restaurantId);
+
+  /// Updates the status of an existing order identified by [orderId].
+  Future<void> updateOrderStatus(dynamic arg1, dynamic arg2, [OrderStatus? arg3]);
 }
 
 /// In-memory mock implementation of [OrderRepository] for unit/widget testing and simulated environments.
@@ -39,6 +48,7 @@ class MockOrderRepository implements OrderRepository {
 
   final Map<String, StreamController<OrderModel?>> _orderControllers = {};
   final Map<String, StreamController<List<OrderModel>>> _userOrdersControllers = {};
+  final Map<String, StreamController<List<OrderModel>>> _restaurantOrdersControllers = {};
 
   StreamController<OrderModel?> _getOrderController(String orderId) {
     return _orderControllers.putIfAbsent(
@@ -54,10 +64,33 @@ class MockOrderRepository implements OrderRepository {
     );
   }
 
+  StreamController<List<OrderModel>> _getRestaurantOrdersController(String restaurantId) {
+    return _restaurantOrdersControllers.putIfAbsent(
+      restaurantId,
+      () => StreamController<List<OrderModel>>.broadcast(),
+    );
+  }
+
   Future<void> _delayIfNeeded() async {
     if (simulatedDelay > Duration.zero) {
       await Future<void>.delayed(simulatedDelay);
     }
+  }
+
+  void _notifyRestaurantOrders(String restaurantId) {
+    if (_restaurantOrdersControllers.containsKey(restaurantId)) {
+      final orders = _getRestaurantOrdersSynchronous(restaurantId);
+      _getRestaurantOrdersController(restaurantId).add(orders);
+    }
+  }
+
+  List<OrderModel> _getRestaurantOrdersSynchronous(String restaurantId) {
+    final allOrders = <OrderModel>[];
+    for (final orders in _ordersByUserId.values) {
+      allOrders.addAll(orders.where((o) => o.restaurantId == restaurantId));
+    }
+    allOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return List.unmodifiable(allOrders);
   }
 
   /// Creates realistic default seed orders for a user when their history is empty.
@@ -250,9 +283,10 @@ class MockOrderRepository implements OrderRepository {
 
     userOrders.insert(0, createdOrder);
 
-    // Notify single-order stream and user-orders stream
+    // Notify single-order stream, user-orders stream, and restaurant stream
     _getOrderController(finalOrderId).add(createdOrder);
     _getUserOrdersController(order.userId).add(List.unmodifiable(userOrders));
+    _notifyRestaurantOrders(order.restaurantId);
 
     return finalOrderId;
   }
@@ -271,17 +305,71 @@ class MockOrderRepository implements OrderRepository {
     yield* _getUserOrdersController(userId).stream;
   }
 
-  /// Helper to mutate order status in-memory for testing progress transitions.
-  void updateOrderStatus(String userId, String orderId, OrderStatus newStatus) {
-    final list = _ordersByUserId[userId];
-    if (list != null) {
+  @override
+  Future<List<OrderModel>> getRestaurantOrders(String restaurantId) async {
+    await _delayIfNeeded();
+    if (restaurantId.isEmpty) return [];
+
+    // Ensure default user data exists for demo seed
+    if (_ordersByUserId.isEmpty) {
+      _createDefaultOrdersForUser('demo-user');
+    }
+
+    return _getRestaurantOrdersSynchronous(restaurantId);
+  }
+
+  @override
+  Stream<List<OrderModel>> watchRestaurantOrders(String restaurantId) async* {
+    final initial = await getRestaurantOrders(restaurantId);
+    yield initial;
+    yield* _getRestaurantOrdersController(restaurantId).stream;
+  }
+
+  @override
+  Future<void> updateOrderStatus(dynamic arg1, dynamic arg2, [OrderStatus? arg3]) async {
+    await _delayIfNeeded();
+    String orderId;
+    OrderStatus newStatus;
+
+    if (arg3 != null) {
+      // Called with (userId, orderId, newStatus)
+      orderId = arg2 as String;
+      newStatus = arg3;
+    } else {
+      // Called with (orderId, newStatus)
+      orderId = arg1 as String;
+      newStatus = arg2 as OrderStatus;
+    }
+
+    String? foundRestaurantId;
+
+    // Search and update across user order stores
+    for (final entry in _ordersByUserId.entries) {
+      final list = entry.value;
       final index = list.indexWhere((o) => o.id == orderId);
       if (index != -1) {
-        final updated = list[index].copyWith(status: newStatus);
+        final currentOrder = list[index];
+        if (!currentOrder.status.canTransitionTo(newStatus)) {
+          throw Exception(
+            'Invalid order status transition from ${currentOrder.status.displayName} to ${newStatus.displayName}',
+          );
+        }
+
+        foundRestaurantId = currentOrder.restaurantId;
+        final updated = currentOrder.copyWith(
+          status: newStatus,
+          updatedAt: DateTime.now(),
+        );
         list[index] = updated;
+
         _getOrderController(orderId).add(updated);
-        _getUserOrdersController(userId).add(List.unmodifiable(list));
+        _getUserOrdersController(entry.key).add(List.unmodifiable(list));
+        break;
       }
+    }
+
+    if (foundRestaurantId != null) {
+      _notifyRestaurantOrders(foundRestaurantId);
     }
   }
 
@@ -290,6 +378,9 @@ class MockOrderRepository implements OrderRepository {
       controller.close();
     }
     for (final controller in _userOrdersControllers.values) {
+      controller.close();
+    }
+    for (final controller in _restaurantOrdersControllers.values) {
       controller.close();
     }
   }

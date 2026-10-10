@@ -102,7 +102,7 @@ class OrderTrackingTimeline extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'This order was cancelled. If you were charged, a refund will be processed to your original payment method.',
+                    'This order has been cancelled successfully.',
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),

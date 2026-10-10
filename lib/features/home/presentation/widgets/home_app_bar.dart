@@ -18,6 +18,7 @@ class HomeAppBar extends StatelessWidget {
     this.userEmail,
     this.userAddress,
     this.cartItemCount = 0,
+    this.unreadNotificationCount = 0,
   });
 
   final VoidCallback? onLocationTap;
@@ -31,6 +32,7 @@ class HomeAppBar extends StatelessWidget {
   final String? userEmail;
   final String? userAddress;
   final int cartItemCount;
+  final int unreadNotificationCount;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +145,7 @@ class HomeAppBar extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
 
-          // Notification Action Button
+          // Notification Action Button with Dynamic Reactive Badge
           Container(
             decoration: BoxDecoration(
               color: AppColors.surface,
@@ -151,21 +153,41 @@ class HomeAppBar extends StatelessWidget {
               border: Border.all(color: AppColors.border),
             ),
             child: IconButton(
-              icon: const Stack(
+              key: const Key('home_notification_button'),
+              icon: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.notifications_outlined,
                     color: AppColors.textPrimary,
                     size: 22,
                   ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: CircleAvatar(
-                      radius: 4,
-                      backgroundColor: AppColors.primary,
+                  if (unreadNotificationCount > 0)
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          unreadNotificationCount > 9 ? '9+' : '$unreadNotificationCount',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            height: 1.0,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ),
-                  ),
                 ],
               ),
               onPressed: onNotificationTap,

@@ -77,20 +77,64 @@ class RestaurantModel {
     };
   }
 
+  static String _parseDeliveryFee(dynamic value) {
+    if (value == null) return '';
+    if (value is num) {
+      if (value == 0) return 'Free delivery';
+      return '\$${value.toStringAsFixed(2)}';
+    }
+    final str = value.toString();
+    final numVal = double.tryParse(str);
+    if (numVal != null) {
+      if (numVal == 0) return 'Free delivery';
+      return '\$${numVal.toStringAsFixed(2)}';
+    }
+    return str;
+  }
+
+  static double _parseDouble(dynamic value, {double defaultValue = 0.0}) {
+    if (value == null) return defaultValue;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+
+  static int _parseInt(dynamic value, {int defaultValue = 0}) {
+    if (value == null) return defaultValue;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? defaultValue;
+    return defaultValue;
+  }
+
+  static bool _parseBool(dynamic value, {bool defaultValue = true}) {
+    if (value == null) return defaultValue;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final lower = value.trim().toLowerCase();
+      if (lower == 'true' || lower == '1' || lower == 'yes') return true;
+      if (lower == 'false' || lower == '0' || lower == 'no') return false;
+    }
+    return defaultValue;
+  }
+
   factory RestaurantModel.fromMap(Map<String, dynamic> map, [String? docId]) {
+    final rawName = map['name'] ?? map['name '] ?? '';
+    final rawBadge = map['featuredBadge'] ?? map['featureBadge'];
+
     return RestaurantModel(
-      id: (docId ?? map['id'] ?? '') as String,
-      name: (map['name'] ?? '') as String,
-      description: (map['description'] ?? '') as String,
-      imageUrl: (map['imageUrl'] ?? '') as String,
-      rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
-      reviewCount: (map['reviewCount'] as num?)?.toInt() ?? 0,
-      deliveryTime: (map['deliveryTime'] ?? '') as String,
-      deliveryFee: (map['deliveryFee'] ?? '') as String,
-      cuisine: (map['cuisine'] ?? '') as String,
-      isOpen: (map['isOpen'] as bool?) ?? true,
-      address: (map['address'] ?? '') as String,
-      featuredBadge: map['featuredBadge'] as String?,
+      id: (docId ?? map['id'] ?? '').toString(),
+      name: rawName.toString(),
+      description: (map['description'] ?? '').toString(),
+      imageUrl: (map['imageUrl'] ?? '').toString(),
+      rating: _parseDouble(map['rating']),
+      reviewCount: _parseInt(map['reviewCount']),
+      deliveryTime: (map['deliveryTime'] ?? '').toString(),
+      deliveryFee: _parseDeliveryFee(map['deliveryFee']),
+      cuisine: (map['cuisine'] ?? '').toString(),
+      isOpen: _parseBool(map['isOpen']),
+      address: (map['address'] ?? '').toString(),
+      featuredBadge: rawBadge?.toString(),
     );
   }
 

@@ -64,6 +64,63 @@ void main() {
       expect(item.calories, isNull);
     });
 
+    test('fromMap parses dish-1, dish-2, dish-3 test payloads correctly', () {
+      final dish1Data = {
+        'id': 'dish-1',
+        'restaurantId': 'rest-test-1',
+        'name': 'Classic Cheeseburger',
+        'description': 'Angus beef patty, cheddar cheese, crisp lettuce, tomato, and house special sauce.',
+        'imageUrl': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800',
+        'price': 9.99,
+        'category': 'Burgers',
+        'isAvailable': true,
+        'rating': 4.9,
+        'calories': 650,
+      };
+      final dish1 = FoodItemModel.fromMap(dish1Data, 'dish-1');
+      expect(dish1.id, 'dish-1');
+      expect(dish1.restaurantId, 'rest-test-1');
+      expect(dish1.name, 'Classic Cheeseburger');
+      expect(dish1.price, 9.99);
+      expect(dish1.formattedPrice, '\$9.99');
+      expect(dish1.category, 'Burgers');
+      expect(dish1.isAvailable, true);
+      expect(dish1.rating, 4.9);
+      expect(dish1.calories, 650);
+
+      final dish2Data = {
+        'id': 'dish-2',
+        'restaurantId': 'rest-test-1',
+        'name': 'Crispy Loaded Fries',
+        'description': 'Golden skin-on fries topped with melted cheddar cheese and smoky paprika.',
+        'imageUrl': 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=800',
+        'price': 4.99,
+        'category': 'Sides',
+        'isAvailable': true,
+        'rating': 4.7,
+        'calories': 420,
+      };
+      final dish2 = FoodItemModel.fromMap(dish2Data, 'dish-2');
+      expect(dish2.id, 'dish-2');
+      expect(dish2.price, 4.99);
+
+      final dish3Data = {
+        'id': 'dish-3',
+        'restaurantId': 'rest-test-1',
+        'name': 'Vanilla Bean Milkshake',
+        'description': 'Creamy artisanal milkshake made with pure Madagascar vanilla and whole milk.',
+        'imageUrl': 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=800',
+        'price': 3.99,
+        'category': 'Drinks',
+        'isAvailable': true,
+        'rating': 4.8,
+        'calories': 380,
+      };
+      final dish3 = FoodItemModel.fromMap(dish3Data, 'dish-3');
+      expect(dish3.id, 'dish-3');
+      expect(dish3.price, 3.99);
+    });
+
     test('copyWith creates modified clone', () {
       final updated = testItem.copyWith(
         isAvailable: false,

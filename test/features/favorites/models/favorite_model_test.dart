@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foodexpressdelivery/features/favorites/models/favorite_model.dart';
 
@@ -57,6 +58,32 @@ void main() {
       final fromMapModel = FavoriteModel.fromMap(map);
       expect(fromMapModel.restaurantId, 'rest-2');
       expect(fromMapModel.userId, 'user-456');
+      expect(fromMapModel.createdAt, testDate);
+    });
+
+    test('fromMap deserializes map with Firestore Timestamp accurately', () {
+      final timestamp = Timestamp.fromDate(testDate);
+      final map = {
+        'restaurantId': 'rest-3',
+        'userId': 'user-789',
+        'createdAt': timestamp,
+      };
+
+      final fromMapModel = FavoriteModel.fromMap(map);
+      expect(fromMapModel.restaurantId, 'rest-3');
+      expect(fromMapModel.userId, 'user-789');
+      expect(fromMapModel.createdAt, testDate);
+    });
+
+    test('fromMap extracts restaurantId from docId when present', () {
+      final map = {
+        'userId': 'user-789',
+        'createdAt': testDate,
+      };
+
+      final fromMapModel = FavoriteModel.fromMap(map, 'rest-doc-99');
+      expect(fromMapModel.restaurantId, 'rest-doc-99');
+      expect(fromMapModel.userId, 'user-789');
       expect(fromMapModel.createdAt, testDate);
     });
 

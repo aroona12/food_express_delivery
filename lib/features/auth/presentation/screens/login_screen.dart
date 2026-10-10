@@ -37,16 +37,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    final success = await ref.read(authControllerProvider.notifier).signIn(
+    await ref.read(authControllerProvider.notifier).signIn(
           email: _emailController.text,
           password: _passwordController.text,
         );
-
-    if (success && mounted) {
-      // The router redirect will naturally route to /home when auth state changes,
-      // but we can also explicitly navigate if needed.
-      context.go('/home');
-    }
+    // Declarative GoRouter redirect automatically routes to /restaurant/dashboard
+    // for Restaurant Owners or /home for Customers upon authentication and profile resolution.
   }
 
   @override

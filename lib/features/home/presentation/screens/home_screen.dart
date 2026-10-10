@@ -13,6 +13,8 @@ import '../../../../core/widgets/loading_indicator.dart';
 import '../../../address/providers/address_provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../cart/providers/cart_provider.dart';
+import '../../../notifications/presentation/widgets/foreground_notification_listener.dart';
+import '../../../notifications/providers/notification_providers.dart';
 import '../../../profile/providers/user_provider.dart';
 import '../../../restaurant/providers/restaurant_provider.dart';
 import '../widgets/category_list.dart';
@@ -73,29 +75,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final selectedCategory = ref.watch(restaurantCategoryFilterProvider);
     final restaurantsAsync = ref.watch(filteredRestaurantsProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
+    final unreadNotificationCount = ref.watch(unreadNotificationCountProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // Top App Bar
-            SliverToBoxAdapter(
-              child: HomeAppBar(
-                userName: user?.name,
-                userEmail: user?.email,
-                userAddress: selectedAddress?.formattedAddress ?? user?.address,
-                cartItemCount: cartItemCount,
-                onCartTap: () => context.push('/cart'),
-                onFavoritesTap: () => context.push('/favorites'),
-                onOrdersTap: () => context.push('/orders'),
-                onLocationTap: () => context.push('/addresses?select=true'),
-                onNotificationTap: () => _showNotificationMessage('Notifications (Coming in Day 9)'),
-                onProfileTap: () => context.push('/profile'),
-                onLogoutTap: () => ref.read(authControllerProvider.notifier).signOut(),
+    return ForegroundNotificationListener(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Top App Bar
+              SliverToBoxAdapter(
+                child: HomeAppBar(
+                  userName: user?.name,
+                  userEmail: user?.email,
+                  userAddress: selectedAddress?.formattedAddress ?? user?.address,
+                  cartItemCount: cartItemCount,
+                  unreadNotificationCount: unreadNotificationCount,
+                  onCartTap: () => context.push('/cart'),
+                  onFavoritesTap: () => context.push('/favorites'),
+                  onOrdersTap: () => context.push('/orders'),
+                  onLocationTap: () => context.push('/addresses?select=true'),
+                  onNotificationTap: () => context.push('/notifications'),
+                  onProfileTap: () => context.push('/profile'),
+                  onLogoutTap: () => ref.read(authControllerProvider.notifier).signOut(),
+                ),
               ),
-            ),
 
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sm)),
 
@@ -392,8 +397,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           }
         },
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// Interactive sheet to verify all Day 1 reusable widgets.

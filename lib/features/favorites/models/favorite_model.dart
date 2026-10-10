@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Domain model representing a customer's favorite restaurant.
 ///
 /// Decoupled from Firebase and storage implementations.
@@ -37,8 +39,9 @@ class FavoriteModel {
     };
   }
 
-  factory FavoriteModel.fromMap(Map<String, dynamic> map) {
+  factory FavoriteModel.fromMap(Map<String, dynamic> map, [String? docId]) {
     DateTime parseDate(dynamic value) {
+      if (value is Timestamp) return value.toDate();
       if (value is DateTime) return value;
       if (value is String) {
         return DateTime.tryParse(value) ?? DateTime.now();
@@ -47,7 +50,10 @@ class FavoriteModel {
     }
 
     return FavoriteModel(
-      restaurantId: (map['restaurantId'] ?? '') as String,
+      restaurantId: (docId != null && docId.isNotEmpty
+              ? docId
+              : (map['restaurantId'] ?? ''))
+          as String,
       userId: (map['userId'] ?? '') as String,
       createdAt: parseDate(map['createdAt']),
     );

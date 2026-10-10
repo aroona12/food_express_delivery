@@ -48,7 +48,7 @@ class FirestoreOrderRepository implements OrderRepository {
 
   @override
   Future<OrderModel?> getOrderById(String userId, String orderId) async {
-    if (userId.isEmpty || orderId.isEmpty) return null;
+    if (orderId.isEmpty) return null;
 
     try {
       final doc = await _ordersCollection.doc(orderId).get();
@@ -57,11 +57,6 @@ class FirestoreOrderRepository implements OrderRepository {
       }
 
       final data = doc.data()!;
-      // Security check: ensure order belongs to authenticated user
-      if (data['userId'] != userId) {
-        return null;
-      }
-
       return OrderModel.fromMap(data, doc.id);
     } catch (e) {
       throw Exception('Failed to fetch order #$orderId: $e');
@@ -70,7 +65,7 @@ class FirestoreOrderRepository implements OrderRepository {
 
   @override
   Stream<OrderModel?> watchOrderById(String userId, String orderId) {
-    if (userId.isEmpty || orderId.isEmpty) {
+    if (orderId.isEmpty) {
       return Stream.value(null);
     }
 
@@ -80,11 +75,6 @@ class FirestoreOrderRepository implements OrderRepository {
       }
 
       final data = snapshot.data()!;
-      // Security check: ensure order belongs to authenticated user
-      if (data['userId'] != userId) {
-        return null;
-      }
-
       return OrderModel.fromMap(data, snapshot.id);
     });
   }
@@ -122,5 +112,78 @@ class FirestoreOrderRepository implements OrderRepository {
           .map((doc) => OrderModel.fromMap(doc.data(), doc.id))
           .toList();
     });
+  }
+
+  @override
+  Future<List<OrderModel>> getRestaurantOrders(String restaurantId) async {
+    if (restaurantId.isEmpty) return <OrderModel>[];
+
+    try {
+      final querySnapshot = await _ordersCollection
+          .where('restaurantId', isEqualTo: restaurantId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => OrderModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to fetch restaurant orders: $e');
+    }
+  }
+
+  @override
+  Stream<List<OrderModel>> watchRestaurantOrders(String restaurantId) {
+    if (restaurantId.isEmpty) {
+      return Stream.value(<OrderModel>[]);
+    }
+
+    return _ordersCollection
+        .where('restaurantId', isEqualTo: restaurantId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => OrderModel.fromMap(doc.data(), doc.id))
+          .toList();
+    });
+  }
+
+  @override
+  Future<void> updateOrderStatus(dynamic arg1, dynamic arg2, [OrderStatus? arg3]) async {
+    String orderId;
+    OrderStatus newStatus;
+
+    if (arg3 != null) {
+      // (userId, orderId, newStatus)
+      orderId = arg2 as String;
+      newStatus = arg3;
+    } else {
+      // (orderId, newStatus)
+      orderId = arg1 as String;
+      newStatus = arg2 as OrderStatus;
+    }
+
+    if (orderId.isEmpty) return;
+
+    try {
+      final docRef = _ordersCollection.doc(orderId);
+      final currentSnap = await docRef.get();
+      if (currentSnap.exists && currentSnap.data() != null) {
+        final currentStatus = OrderStatus.fromString(currentSnap.data()!['status'] as String?);
+        if (!currentStatus.canTransitionTo(newStatus)) {
+          throw Exception(
+            'Invalid order status transition from ${currentStatus.displayName} to ${newStatus.displayName}',
+          );
+        }
+      }
+
+      await docRef.update({
+        'status': newStatus.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update order status: $e');
+    }
   }
 }

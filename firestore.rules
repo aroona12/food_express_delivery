@@ -2,19 +2,162 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Day 3: User Profile Security Rules
-    // Customers can only read and write their own profile document
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // ==========================================
+    // Authentication & Role Helper Functions
+    // ==========================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    function getUserRole() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             ('role' in getUserDoc().data)
+        ? getUserDoc().data.role
+        : 'customer';
+    }
+    
+    function getUserRestaurantId() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             ('restaurantId' in getUserDoc().data)
+        ? getUserDoc().data.restaurantId
+        : null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token != null && 'role' in request.auth.token && request.auth.token.role == 'admin') ||
+        (getUserRole() == 'admin')
+      );
+    }
+    
+    function isRestaurantOwner(restaurantId) {
+      return isAuthenticated() && (
+        isAdmin() ||
+        (getUserRole() == 'restaurant' && getUserRestaurantId() == restaurantId)
+      );
     }
 
-    // Day 8: Customer Orders Security Rules
-    // Customers can only create orders where userId matches their authenticated UID,
-    // and can only read/listen to/update orders they own.
+    function isValidRestaurantStatusTransition(fromStatus, toStatus) {
+      return (fromStatus == toStatus) ||
+        (fromStatus == 'pending' && (toStatus == 'confirmed' || toStatus == 'cancelled')) ||
+        (fromStatus == 'confirmed' && (toStatus == 'preparing' || toStatus == 'cancelled')) ||
+        (fromStatus == 'preparing' && (toStatus == 'outForDelivery' || toStatus == 'cancelled')) ||
+        (fromStatus == 'outForDelivery' && toStatus == 'delivered');
+    }
+
+    // ==========================================
+    // 1. Users Profile & Subcollections
+    // ==========================================
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      
+      allow create: if isOwner(userId) && (
+        isAdmin() || (
+          (!('role' in request.resource.data) || request.resource.data.role == 'customer') &&
+          (!('restaurantId' in request.resource.data) || request.resource.data.restaurantId == null)
+        )
+      );
+      
+      // Customers cannot elevate role or change assigned restaurantId
+      allow update: if isOwner(userId) && (
+        isAdmin() ||
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'restaurantId']))
+      ) || isAdmin();
+      
+      allow delete: if isAdmin();
+
+      // User Saved Addresses Subcollection
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      // User Favorites Subcollection
+      match /favorites/{favoriteId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      // User Notifications Subcollection
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) && request.resource.data.userId == userId) || isAdmin();
+        allow update: if (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])) || isAdmin();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // ==========================================
+    // 2. Restaurants & Menu Items
+    // ==========================================
+    match /restaurants/{restaurantId} {
+      // Anyone can read restaurant metadata for browsing
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      // Only the assigned restaurant owner or admin can update status / info
+      allow update: if isRestaurantOwner(restaurantId);
+
+      // Subcollection for menu items
+      match /menu_items/{itemId} {
+        allow read: if true;
+        allow write: if isRestaurantOwner(restaurantId);
+      }
+    }
+
+    // ==========================================
+    // 3. Orders Collection
+    // ==========================================
     match /orders/{orderId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read, update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if false;
+      // Customers can create orders tied to their UID in initial pending status with valid types and positive totals
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.subtotal is number &&
+        request.resource.data.subtotal >= 0 &&
+        request.resource.data.deliveryFee is number &&
+        request.resource.data.deliveryFee >= 0 &&
+        request.resource.data.total is number &&
+        request.resource.data.total >= 0 &&
+        request.resource.data.restaurantId is string &&
+        request.resource.data.restaurantId.size() > 0 &&
+        request.resource.data.items is list &&
+        request.resource.data.items.size() > 0;
+      
+      // Customers read own orders; Restaurant owners read assigned orders; Admins read all
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isRestaurantOwner(resource.data.restaurantId) ||
+        isAdmin()
+      );
+      
+      // Order status updates:
+      // - Customer: can cancel if pending
+      // - Restaurant owner: can update valid order progression for their assigned restaurant
+      // - Admin: full management access
+      allow update: if isAuthenticated() && (
+        (
+          resource.data.userId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+          request.resource.data.status == 'cancelled' &&
+          resource.data.status == 'pending'
+        ) ||
+        (
+          isRestaurantOwner(resource.data.restaurantId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+          isValidRestaurantStatusTransition(resource.data.status, request.resource.data.status)
+        ) ||
+        isAdmin()
+      );
+      
+      allow delete: if isAdmin();
     }
   }
 }

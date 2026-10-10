@@ -101,6 +101,24 @@ enum OrderStatus {
         return OrderStatus.pending;
     }
   }
+
+  /// Validates whether transitioning from this status to [nextStatus] is permissible by business rules.
+  bool canTransitionTo(OrderStatus nextStatus) {
+    if (this == nextStatus) return true;
+    switch (this) {
+      case OrderStatus.pending:
+        return nextStatus == OrderStatus.confirmed || nextStatus == OrderStatus.cancelled;
+      case OrderStatus.confirmed:
+        return nextStatus == OrderStatus.preparing || nextStatus == OrderStatus.cancelled;
+      case OrderStatus.preparing:
+        return nextStatus == OrderStatus.outForDelivery || nextStatus == OrderStatus.cancelled;
+      case OrderStatus.outForDelivery:
+        return nextStatus == OrderStatus.delivered;
+      case OrderStatus.delivered:
+      case OrderStatus.cancelled:
+        return false;
+    }
+  }
 }
 
 /// Domain entity representing a customer's placed food order in FoodExpress.
@@ -118,6 +136,7 @@ class OrderModel {
     required this.total,
     required this.status,
     required this.createdAt,
+    this.updatedAt,
     this.deliveryAddress,
     this.orderNotes,
     this.paymentMethod,
@@ -152,6 +171,9 @@ class OrderModel {
 
   /// Timestamp when the order was placed.
   final DateTime createdAt;
+
+  /// Timestamp when the order was last updated.
+  final DateTime? updatedAt;
 
   /// Formatted delivery address where the order is dispatched.
   final String? deliveryAddress;
@@ -202,6 +224,7 @@ class OrderModel {
     double? total,
     OrderStatus? status,
     DateTime? createdAt,
+    DateTime? updatedAt,
     String? deliveryAddress,
     String? orderNotes,
     String? paymentMethod,
@@ -217,6 +240,7 @@ class OrderModel {
       total: total ?? this.total,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,
       orderNotes: orderNotes ?? this.orderNotes,
       paymentMethod: paymentMethod ?? this.paymentMethod,
@@ -235,6 +259,7 @@ class OrderModel {
       'total': total,
       'status': status.name,
       'createdAt': createdAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (deliveryAddress != null) 'deliveryAddress': deliveryAddress,
       if (orderNotes != null) 'orderNotes': orderNotes,
       if (paymentMethod != null) 'paymentMethod': paymentMethod,
@@ -243,7 +268,7 @@ class OrderModel {
 
   factory OrderModel.fromMap(Map<String, dynamic> map, [String? docId]) {
     final rawItems = map['items'] as List<dynamic>? ?? [];
-    DateTime parseDate(dynamic value) {
+    DateTime parseDate(dynamic value, [DateTime? fallback]) {
       if (value is DateTime) return value;
       if (value != null && value is! String) {
         try {
@@ -254,9 +279,26 @@ class OrderModel {
         } catch (_) {}
       }
       if (value is String) {
-        return DateTime.tryParse(value) ?? DateTime.now();
+        return DateTime.tryParse(value) ?? fallback ?? DateTime.now();
       }
-      return DateTime.now();
+      return fallback ?? DateTime.now();
+    }
+
+    DateTime? parseOptionalDate(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      if (value is! String) {
+        try {
+          final dynamic dynVal = value;
+          if (dynVal.toDate != null) {
+            return dynVal.toDate() as DateTime;
+          }
+        } catch (_) {}
+      }
+      if (value is String) {
+        return DateTime.tryParse(value);
+      }
+      return null;
     }
 
     return OrderModel(
@@ -272,6 +314,7 @@ class OrderModel {
       total: (map['total'] as num?)?.toDouble() ?? 0.0,
       status: OrderStatus.fromString(map['status'] as String?),
       createdAt: parseDate(map['createdAt']),
+      updatedAt: parseOptionalDate(map['updatedAt']),
       deliveryAddress: map['deliveryAddress'] as String?,
       orderNotes: map['orderNotes'] as String?,
       paymentMethod: map['paymentMethod'] as String?,
@@ -293,6 +336,7 @@ class OrderModel {
           total == other.total &&
           status == other.status &&
           createdAt == other.createdAt &&
+          updatedAt == other.updatedAt &&
           deliveryAddress == other.deliveryAddress &&
           orderNotes == other.orderNotes &&
           paymentMethod == other.paymentMethod;
@@ -309,6 +353,7 @@ class OrderModel {
         total,
         status,
         createdAt,
+        updatedAt,
         deliveryAddress,
         orderNotes,
         paymentMethod,

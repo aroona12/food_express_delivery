@@ -3,16 +3,23 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 /// Represents the user's authorization role within FoodExpress.
 enum UserRole {
   customer,
+  restaurant,
   admin;
 
   String get displayName {
     switch (this) {
       case UserRole.customer:
         return 'Customer';
+      case UserRole.restaurant:
+        return 'Restaurant Owner';
       case UserRole.admin:
-        return 'Restaurant Admin';
+        return 'System Admin';
     }
   }
+
+  bool get isCustomer => this == UserRole.customer;
+  bool get isRestaurant => this == UserRole.restaurant;
+  bool get isAdmin => this == UserRole.admin;
 
   static UserRole fromString(String? roleStr) {
     if (roleStr == null) return UserRole.customer;
@@ -33,9 +40,11 @@ class UserModel {
     required this.email,
     required this.name,
     this.role = UserRole.customer,
+    this.restaurantId,
     this.phone,
     this.address,
     this.profileImageUrl,
+    this.fcmToken,
     this.createdAt,
   });
 
@@ -48,8 +57,11 @@ class UserModel {
   /// User's display name or full name.
   final String name;
 
-  /// Authorization role (Customer or Admin).
+  /// Authorization role (Customer, Restaurant, or Admin).
   final UserRole role;
+
+  /// Associated restaurant ID if the user is a restaurant owner/staff.
+  final String? restaurantId;
 
   /// Contact phone number for delivery orders and notifications.
   final String? phone;
@@ -60,6 +72,9 @@ class UserModel {
   /// Profile avatar photo URL.
   final String? profileImageUrl;
 
+  /// Firebase Cloud Messaging device registration token for push notifications.
+  final String? fcmToken;
+
   /// Account creation timestamp.
   final DateTime? createdAt;
 
@@ -67,10 +82,12 @@ class UserModel {
   factory UserModel.fromFirebaseUser(
     fb.User user, {
     UserRole role = UserRole.customer,
+    String? restaurantId,
     String? name,
     String? phone,
     String? address,
     String? profileImageUrl,
+    String? fcmToken,
     DateTime? createdAt,
   }) {
     return UserModel(
@@ -81,9 +98,11 @@ class UserModel {
               ? user.displayName!
               : 'FoodExpress Customer'),
       role: role,
+      restaurantId: restaurantId,
       phone: phone ?? user.phoneNumber,
       address: address,
       profileImageUrl: profileImageUrl ?? user.photoURL,
+      fcmToken: fcmToken,
       createdAt: createdAt ?? user.metadata.creationTime,
     );
   }
@@ -94,9 +113,11 @@ class UserModel {
     String? email,
     String? name,
     UserRole? role,
+    String? restaurantId,
     String? phone,
     String? address,
     String? profileImageUrl,
+    String? fcmToken,
     DateTime? createdAt,
   }) {
     return UserModel(
@@ -104,9 +125,11 @@ class UserModel {
       email: email ?? this.email,
       name: name ?? this.name,
       role: role ?? this.role,
+      restaurantId: restaurantId ?? this.restaurantId,
       phone: phone ?? this.phone,
       address: address ?? this.address,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      fcmToken: fcmToken ?? this.fcmToken,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -118,9 +141,11 @@ class UserModel {
       'email': email,
       'name': name,
       'role': role.name,
+      if (restaurantId != null) 'restaurantId': restaurantId,
       'phone': phone,
       'address': address,
       'profileImageUrl': profileImageUrl,
+      if (fcmToken != null) 'fcmToken': fcmToken,
       'createdAt': createdAt?.toIso8601String(),
     };
   }
@@ -132,9 +157,11 @@ class UserModel {
       email: map['email'] as String? ?? '',
       name: map['name'] as String? ?? '',
       role: UserRole.fromString(map['role'] as String?),
+      restaurantId: map['restaurantId'] as String?,
       phone: map['phone'] as String?,
       address: map['address'] as String?,
       profileImageUrl: map['profileImageUrl'] as String?,
+      fcmToken: map['fcmToken'] as String?,
       createdAt: _parseDateTime(map['createdAt']),
     );
   }
@@ -162,9 +189,11 @@ class UserModel {
           email == other.email &&
           name == other.name &&
           role == other.role &&
+          restaurantId == other.restaurantId &&
           phone == other.phone &&
           address == other.address &&
           profileImageUrl == other.profileImageUrl &&
+          fcmToken == other.fcmToken &&
           createdAt == other.createdAt;
 
   @override
@@ -173,12 +202,14 @@ class UserModel {
       email.hashCode ^
       name.hashCode ^
       role.hashCode ^
+      restaurantId.hashCode ^
       phone.hashCode ^
       address.hashCode ^
       profileImageUrl.hashCode ^
+      fcmToken.hashCode ^
       createdAt.hashCode;
 
   @override
   String toString() =>
-      'UserModel(id: $id, email: $email, name: $name, role: $role, phone: $phone, address: $address, profileImageUrl: $profileImageUrl, createdAt: $createdAt)';
+      'UserModel(id: $id, email: $email, name: $name, role: $role, restaurantId: $restaurantId, phone: $phone, address: $address, profileImageUrl: $profileImageUrl, fcmToken: $fcmToken, createdAt: $createdAt)';
 }

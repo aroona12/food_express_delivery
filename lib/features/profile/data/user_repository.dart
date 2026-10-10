@@ -26,6 +26,12 @@ abstract class UserRepository {
     String? address,
     String? profileImageUrl,
   });
+
+  /// Updates or registers the FCM push notification token for the user.
+  Future<void> updateFcmToken({
+    required String uid,
+    required String token,
+  });
 }
 
 /// Production implementation of [UserRepository] using Cloud Firestore.
@@ -33,9 +39,12 @@ abstract class UserRepository {
 /// Stores user documents under collection `users/{firebaseAuthUid}`.
 class FirestoreUserRepository implements UserRepository {
   FirestoreUserRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _customFirestore = firestore;
 
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _customFirestore;
+
+  FirebaseFirestore get _firestore =>
+      _customFirestore ?? FirebaseFirestore.instance;
 
   static const String collectionName = 'users';
 
@@ -114,6 +123,19 @@ class FirestoreUserRepository implements UserRepository {
       await _userDoc(uid).set(updates, SetOptions(merge: true));
     } catch (e) {
       throw Exception('Failed to update profile details: $e');
+    }
+  }
+
+  @override
+  Future<void> updateFcmToken({
+    required String uid,
+    required String token,
+  }) async {
+    if (uid.isEmpty || token.isEmpty) return;
+    try {
+      await _userDoc(uid).set({'fcmToken': token.trim()}, SetOptions(merge: true));
+    } catch (e) {
+      throw Exception('Failed to update FCM device token: $e');
     }
   }
 }

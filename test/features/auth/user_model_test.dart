@@ -26,13 +26,14 @@ void main() {
       expect(user.createdAt, now);
     });
 
-    test('serializes to and from map correctly with ISO string dates', () {
+    test('serializes to and from map correctly with ISO string dates and restaurantId', () {
       final date = DateTime(2026, 8, 22, 12, 30);
       final user = UserModel(
         id: 'usr-2',
-        email: 'admin@foodexpress.com',
-        name: 'Admin Owner',
-        role: UserRole.admin,
+        email: 'owner@foodexpress.com',
+        name: 'Burger Studio Owner',
+        role: UserRole.restaurant,
+        restaurantId: 'rest-1',
         phone: '+1 555-9988',
         address: '456 Market St',
         profileImageUrl: 'https://example.com/admin.jpg',
@@ -45,8 +46,12 @@ void main() {
       expect(restoredUser.id, user.id);
       expect(restoredUser.email, user.email);
       expect(restoredUser.name, user.name);
-      expect(restoredUser.role, UserRole.admin);
-      expect(restoredUser.role.displayName, 'Restaurant Admin');
+      expect(restoredUser.role, UserRole.restaurant);
+      expect(restoredUser.restaurantId, 'rest-1');
+      expect(restoredUser.role.displayName, 'Restaurant Owner');
+      expect(restoredUser.role.isRestaurant, isTrue);
+      expect(restoredUser.role.isCustomer, isFalse);
+      expect(restoredUser.role.isAdmin, isFalse);
       expect(restoredUser.phone, user.phone);
       expect(restoredUser.address, user.address);
       expect(restoredUser.profileImageUrl, user.profileImageUrl);
@@ -85,6 +90,8 @@ void main() {
         name: 'Updated Name',
         phone: '222',
         address: 'New Address',
+        role: UserRole.admin,
+        restaurantId: 'rest-9',
       );
 
       expect(updated.id, 'usr-4');
@@ -92,12 +99,16 @@ void main() {
       expect(updated.name, 'Updated Name');
       expect(updated.phone, '222');
       expect(updated.address, 'New Address');
-      expect(updated.role, UserRole.customer);
+      expect(updated.role, UserRole.admin);
+      expect(updated.role.isAdmin, isTrue);
+      expect(updated.restaurantId, 'rest-9');
     });
 
     test('UserRole fromString parses accurately with fallback', () {
       expect(UserRole.fromString('admin'), UserRole.admin);
       expect(UserRole.fromString('ADMIN'), UserRole.admin);
+      expect(UserRole.fromString('restaurant'), UserRole.restaurant);
+      expect(UserRole.fromString('RESTAURANT'), UserRole.restaurant);
       expect(UserRole.fromString('customer'), UserRole.customer);
       expect(UserRole.fromString('unknown'), UserRole.customer);
       expect(UserRole.fromString(null), UserRole.customer);

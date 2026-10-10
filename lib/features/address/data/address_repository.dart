@@ -23,7 +23,7 @@ abstract class AddressRepository {
   Future<void> setDefaultAddress(String userId, String addressId);
 }
 
-/// In-memory mock implementation of [AddressRepository] for Day 7.
+
 class MockAddressRepository implements AddressRepository {
   MockAddressRepository({
     Map<String, List<AddressModel>>? initialData,

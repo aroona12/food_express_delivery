@@ -20,7 +20,7 @@ final authStateChangesProvider = StreamProvider<UserModel?>((ref) {
 /// Provider for accessing the currently authenticated [UserModel] synchronously.
 final currentUserProvider = Provider<UserModel?>((ref) {
   final authState = ref.watch(authStateChangesProvider);
-  return authState.valueOrNull;
+  return authState.valueOrNull ?? ref.watch(authRepositoryProvider).currentUser;
 });
 
 /// State notifier managing the execution state (idle, loading, error, success)

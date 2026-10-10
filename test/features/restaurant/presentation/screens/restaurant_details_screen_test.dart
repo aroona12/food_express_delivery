@@ -8,6 +8,10 @@ import 'package:foodexpressdelivery/features/restaurant/models/restaurant_model.
 import 'package:foodexpressdelivery/features/restaurant/presentation/screens/restaurant_details_screen.dart';
 import 'package:foodexpressdelivery/features/restaurant/presentation/widgets/food_item_card.dart';
 import 'package:foodexpressdelivery/features/restaurant/presentation/widgets/menu_category_list.dart';
+import 'package:foodexpressdelivery/features/auth/models/user_model.dart';
+import 'package:foodexpressdelivery/features/auth/providers/auth_provider.dart';
+import 'package:foodexpressdelivery/features/favorites/data/favorite_repository.dart';
+import 'package:foodexpressdelivery/features/favorites/providers/favorite_provider.dart';
 import 'package:foodexpressdelivery/features/restaurant/providers/restaurant_provider.dart';
 
 void main() {
@@ -63,10 +67,19 @@ void main() {
     );
   });
 
+  const testUser = UserModel(
+    id: 'user-123',
+    email: 'customer@test.com',
+    name: 'Test Customer',
+    role: UserRole.customer,
+  );
+
   Widget createWidgetUnderTest(String restaurantId) {
     return ProviderScope(
       overrides: [
         restaurantRepositoryProvider.overrideWithValue(fakeRepository),
+        currentUserProvider.overrideWithValue(testUser),
+        favoriteRepositoryProvider.overrideWithValue(MockFavoriteRepository()),
       ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,

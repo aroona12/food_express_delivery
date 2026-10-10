@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Domain model representing a customer's delivery address.
 ///
 /// Decoupled from Firebase and database SDKs.
@@ -88,6 +90,7 @@ class AddressModel {
 
   factory AddressModel.fromMap(Map<String, dynamic> map, [String? docId]) {
     DateTime parseDate(dynamic value) {
+      if (value is Timestamp) return value.toDate();
       if (value is DateTime) return value;
       if (value is String) {
         return DateTime.tryParse(value) ?? DateTime.now();
@@ -96,7 +99,7 @@ class AddressModel {
     }
 
     return AddressModel(
-      id: (docId ?? map['id'] ?? '') as String,
+      id: (docId != null && docId.isNotEmpty ? docId : (map['id'] ?? '')) as String,
       userId: (map['userId'] ?? '') as String,
       label: (map['label'] ?? 'Home') as String,
       fullAddress: (map['fullAddress'] ?? '') as String,

@@ -1,11 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../data/address_repository.dart';
+import '../data/firestore_address_repository.dart';
 import '../models/address_model.dart';
 
 /// Provider exposing the [AddressRepository] singleton for the app session.
 final addressRepositoryProvider = Provider<AddressRepository>((ref) {
-  return MockAddressRepository();
+  return FirestoreAddressRepository();
 });
 
 /// State notifier managing the reactive list and mutation lifecycle of customer delivery addresses.

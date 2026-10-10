@@ -139,5 +139,101 @@ void main() {
       expect(categories, containsAll(['All', 'Burgers', 'Sides']));
       expect(categories.length, 3);
     });
+
+    test('createFoodItem adds new item and assigns ID if empty', () async {
+      const newItem = FoodItemModel(
+        id: '',
+        restaurantId: 'rest-1',
+        name: 'Crispy Wings',
+        description: 'Spicy buffalo wings',
+        imageUrl: 'https://example.com/wings.jpg',
+        price: 11.99,
+        category: 'Sides',
+      );
+
+      final createdId = await repository.createFoodItem('rest-1', newItem);
+      expect(createdId, isNotEmpty);
+
+      final items = await repository.getFoodItems('rest-1');
+      expect(items.length, 3);
+      expect(items.any((i) => i.id == createdId && i.name == 'Crispy Wings'), isTrue);
+    });
+
+    test('updateFoodItem modifies existing food item', () async {
+      final existing = (await repository.getFoodItems('rest-1')).first;
+      final updated = existing.copyWith(
+        name: 'Truffle Bacon Burger Deluxe',
+        price: 17.99,
+      );
+
+      await repository.updateFoodItem('rest-1', updated);
+
+      final items = await repository.getFoodItems('rest-1');
+      final found = items.firstWhere((i) => i.id == existing.id);
+      expect(found.name, 'Truffle Bacon Burger Deluxe');
+      expect(found.price, 17.99);
+    });
+
+    test('deleteFoodItem removes specific food item', () async {
+      final initialCount = (await repository.getFoodItems('rest-1')).length;
+      await repository.deleteFoodItem('rest-1', 'item-1');
+
+      final items = await repository.getFoodItems('rest-1');
+      expect(items.length, initialCount - 1);
+      expect(items.any((i) => i.id == 'item-1'), isFalse);
+    });
+
+    test('updateFoodItemAvailability changes isAvailable status', () async {
+      final item = (await repository.getFoodItems('rest-1')).firstWhere((i) => i.id == 'item-1');
+      expect(item.isAvailable, isTrue);
+
+      await repository.updateFoodItemAvailability('rest-1', 'item-1', false);
+
+      final updated = (await repository.getFoodItems('rest-1')).firstWhere((i) => i.id == 'item-1');
+      expect(updated.isAvailable, isFalse);
+    });
+
+    test('updateRestaurantProfile updates editable profile fields and preserves system fields', () async {
+      final existing = await repository.getRestaurantById('rest-1');
+      expect(existing, isNotNull);
+      expect(existing!.name, 'The Burger Studio');
+      expect(existing.rating, 4.8);
+      expect(existing.reviewCount, 300);
+
+      final updatedProfile = existing.copyWith(
+        name: 'The Burger Studio & Grill',
+        description: 'Artisanal burgers and barbecue',
+        cuisine: 'Gourmet Burgers • BBQ',
+        address: '999 Market Way',
+        deliveryTime: '15-25 min',
+        deliveryFee: '\$2.49',
+        imageUrl: 'https://example.com/new-burger.jpg',
+        isOpen: false,
+        // Attempting to change system-controlled fields in input model
+        rating: 5.0,
+        reviewCount: 9999,
+        featuredBadge: 'Hacked Badge',
+      );
+
+      await repository.updateRestaurantProfile('rest-1', updatedProfile);
+
+      final result = await repository.getRestaurantById('rest-1');
+      expect(result, isNotNull);
+      // Editable fields are updated
+      expect(result!.name, 'The Burger Studio & Grill');
+      expect(result.description, 'Artisanal burgers and barbecue');
+      expect(result.cuisine, 'Gourmet Burgers • BBQ');
+      expect(result.address, '999 Market Way');
+      expect(result.deliveryTime, '15-25 min');
+      expect(result.deliveryFee, '\$2.49');
+      expect(result.imageUrl, 'https://example.com/new-burger.jpg');
+      expect(result.isOpen, isFalse);
+      // System-controlled fields are preserved from existing
+      expect(result.rating, 4.8);
+      expect(result.reviewCount, 300);
+      expect(result.id, 'rest-1');
+    });
   });
 }
+
+

@@ -124,15 +124,27 @@ void main() {
       final allItems = await container.read(foodItemsProvider('rest-1').future);
       expect(allItems.length, 2);
 
+      // Ensure stream has resolved
+      await container.read(foodItemsStreamProvider('rest-1').future);
+
       // Default filtered is 'All'
-      var filteredItems = await container.read(filteredFoodItemsProvider('rest-1').future);
+      var filteredItems = container.read(filteredFoodItemsProvider('rest-1')).value!;
       expect(filteredItems.length, 2);
 
       // Change selected category
       container.read(selectedMenuCategoryProvider('rest-1').notifier).state = 'Burgers';
-      filteredItems = await container.read(filteredFoodItemsProvider('rest-1').future);
+      filteredItems = container.read(filteredFoodItemsProvider('rest-1')).value!;
       expect(filteredItems.length, 1);
       expect(filteredItems.first.name, 'Truffle Burger');
+    });
+
+    test('foodItemsStreamProvider emits live menu items stream', () async {
+      final container = createContainer();
+      final streamItems = await container.read(foodItemsStreamProvider('rest-1').future);
+
+      expect(streamItems.length, 2);
+      expect(streamItems[0].name, 'Truffle Burger');
+      expect(streamItems[1].name, 'Parmesan Fries');
     });
 
     test('menuCategoriesProvider extracts category list with "All"', () async {

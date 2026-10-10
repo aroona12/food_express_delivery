@@ -73,6 +73,11 @@ class FakeAuthRepository implements AuthRepository {
     _authStateController.add(null);
   }
 
+  void setUser(UserModel? user) {
+    _currentUser = user;
+    _authStateController.add(user);
+  }
+
   void dispose() {
     _authStateController.close();
   }

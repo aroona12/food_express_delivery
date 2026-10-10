@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foodexpressdelivery/features/address/models/address_model.dart';
 
@@ -109,6 +110,31 @@ void main() {
       expect(parsed.label, 'Home'); // default
       expect(parsed.isDefault, isFalse); // default
       expect(parsed.additionalInstructions, isNull);
+    });
+
+    test('fromMap deserializes map with Firestore Timestamp accurately', () {
+      final timestamp = Timestamp.fromDate(testDate);
+      final map = {
+        'id': 'addr-ts',
+        'userId': 'user-ts',
+        'label': 'Cabin',
+        'fullAddress': '456 Forest Rd',
+        'city': 'Timberline',
+        'phone': '555-7890',
+        'isDefault': true,
+        'createdAt': timestamp,
+      };
+
+      final parsed = AddressModel.fromMap(map, 'doc-ts');
+
+      expect(parsed.id, 'doc-ts');
+      expect(parsed.userId, 'user-ts');
+      expect(parsed.label, 'Cabin');
+      expect(parsed.fullAddress, '456 Forest Rd');
+      expect(parsed.city, 'Timberline');
+      expect(parsed.phone, '555-7890');
+      expect(parsed.isDefault, isTrue);
+      expect(parsed.createdAt, testDate);
     });
 
     test('equality and hashCode verify identical instances', () {

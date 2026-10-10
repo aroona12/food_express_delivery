@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:foodexpressdelivery/features/address/data/address_repository.dart';
 import 'package:foodexpressdelivery/features/address/models/address_model.dart';
 import 'package:foodexpressdelivery/features/address/providers/address_provider.dart';
 import 'package:foodexpressdelivery/features/auth/models/user_model.dart';
@@ -73,15 +74,22 @@ void main() {
 
       final fakeOrderRepo = orderRepository ?? MockOrderRepository();
 
+      final fakeAddressRepo = MockAddressRepository(
+        initialData: {
+          if (currentUser != null && selectedAddress != null)
+            currentUser.id: [selectedAddress],
+        },
+      );
+
       final container = ProviderContainer(
         overrides: [
           currentUserProvider.overrideWithValue(currentUser),
           restaurantRepositoryProvider.overrideWithValue(fakeRestaurantRepo),
+          addressRepositoryProvider.overrideWithValue(fakeAddressRepo),
           orderRepositoryProvider.overrideWithValue(fakeOrderRepo),
           if (initialCart != null)
             cartControllerProvider.overrideWith((ref) => CartController(initialCart)),
-          if (selectedAddress != null)
-            selectedAddressProvider.overrideWithValue(selectedAddress),
+          selectedAddressProvider.overrideWithValue(selectedAddress),
         ],
       );
 

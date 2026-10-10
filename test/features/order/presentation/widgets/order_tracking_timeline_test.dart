@@ -44,7 +44,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Order Cancelled'), findsOneWidget);
-      expect(find.textContaining('This order was cancelled'), findsOneWidget);
+      expect(find.textContaining('This order has been cancelled successfully.'), findsOneWidget);
       expect(find.text('Order Placed'), findsNothing);
     });
   });
