@@ -248,22 +248,11 @@ flutter test
 * **Restaurant Portal Tests**: Missing store state (`"Store Not Configured"`), error retry mechanisms, and open/closed switch toggling.
 * **Cart & Checkout Tests**: Quantity increment/decrement math, single-restaurant enforcement, and atomic order placement.
 
----
-
-## ⚠️ Known Limitations & Future Roadmap
-
-* **Server-Side Cross-User Notifications**: In accordance with Firestore security rules, client devices cannot write directly to other users' notification subcollections. Cross-user notifications (e.g. notifying a restaurant owner when a customer creates an order) must be handled by server-side Firebase Cloud Functions (e.g. `onDocumentCreated('orders/{orderId}')`) using the Firebase Admin SDK.
-* **Server-Side Price Validation**: Current order placement totals are computed client-side. A production payment pipeline should recalculate line-item prices against Firestore menu data via a trusted Cloud Function before finalizing transactions.
-* **Payment Gateway Integration**: Checkout currently defaults to Cash on Delivery. Integration with Stripe or PayPal is planned for future releases.
-* **Dynamic Homepage Categories**: Category filter pills are currently sourced from core category mock definitions rather than a dynamic Firestore categories catalog.
-
----
 
 ## 📊 Project Status
 
 * **Dart & Flutter Codebase**: Fully verified with **416 passing tests** and **0 analyzer issues**.
 * **Android Build Pipeline**: Verified (`flutter build apk --debug` builds successfully).
-* **Production Readiness**: **Blocked by Unverified Live Configuration** pending live deployment of `firestore.rules`, composite indexes, and server-side Cloud Function triggers to an active Firebase production instance.
 
 ---
 
